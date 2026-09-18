@@ -1,0 +1,23 @@
+{
+  "name": "asistente-2477",
+  "version": "3.0.0",
+  "description": "Agente WhatsApp IA — Azure App Service + Foundry + PostgreSQL + Upstash",
+  "main": "src/index.js",
+  "engines": { "node": ">=20.0.0" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "applicationinsights": "^3.4.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "ioredis": "^5.3.2",
+    "openai": "^4.47.0",
+    "pg": "^8.11.5",
+    "twilio": "^5.0.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

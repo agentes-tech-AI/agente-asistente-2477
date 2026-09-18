@@ -1,0 +1,8 @@
+NodeVersion="22.22.2"
+nodeBuildCommandsFile="/tmp/quickdeploy/715e9155-0026-460c-9393-f77a58ab5b13/extracted/oryx-build-commands.txt"
+Frameworks="Express"
+compressedNodeModulesFile="node_modules.tar.gz"
+OperationId="8feb345d7b669635"
+SourceDirectoryInBuildContainer="/tmp/8deb4e68422de3a"
+PlatformName="nodejs"
+CompressDestinationDir="false"

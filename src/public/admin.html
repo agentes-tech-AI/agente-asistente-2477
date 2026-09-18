@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Recupero 24/7 - Panel Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --teal:#01b0c0;--cyan:#17e1f3;--mint:#5fcca2;
+  --navy:#080f1e;--navy2:#0f1c2e;--navy3:#162640;
+  --border:rgba(1,176,192,.18);--text:#eef3f9;--text2:#7a9bc0;
+  --red:#ef4444;--yellow:#f59e0b;--green:#22c55e;--purple:#a855f7;
+  --grad:linear-gradient(135deg,#01b0c0,#5fcca2);
+}
+html,body{width:100%;min-height:100vh}
+body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;background:var(--navy);color:var(--text);background-image:radial-gradient(ellipse at 20% 0%,rgba(1,176,192,.07) 0%,transparent 55%),radial-gradient(ellipse at 80% 100%,rgba(95,204,162,.05) 0%,transparent 55%)}
+/* LOGIN */
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#080f1e 0%,#0d1f35 50%,#081820 100%)}
+.lbox{background:rgba(15,28,46,.95);border:1px solid rgba(1,176,192,.22);border-radius:20px;padding:40px;width:100%;max-width:400px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.lbox img{width:200px;height:auto;margin:0 auto 18px;display:block}
+.lbox-brand{font-size:11px;color:var(--cyan);text-transform:uppercase;letter-spacing:.2em;margin-bottom:4px;font-weight:600}
+.lbox-sub{color:var(--text2);font-size:13px;margin-bottom:22px}
+.lbox input{width:100%;background:rgba(8,15,30,.8);border:1px solid rgba(1,176,192,.25);border-radius:10px;padding:12px 14px;font-size:14px;color:var(--text);margin-bottom:14px;text-align:center;font-family:inherit;display:block}
+.lbox input:focus{outline:none;border-color:var(--teal)}
+#btnLogin{width:100%;background:var(--grad);color:var(--navy);font-weight:700;font-size:14px;padding:13px;border-radius:10px;border:none;cursor:pointer;letter-spacing:.08em;display:block}
+#btnLogin:hover{opacity:.9}
+#loginStatus{margin-top:12px;font-size:13px;padding:9px 14px;border-radius:8px;display:none;line-height:1.5}
+#loginStatus.info{background:rgba(1,176,192,.12);color:var(--cyan)}
+#loginStatus.err{background:rgba(239,68,68,.12);color:var(--red)}
+#diagInfo{margin-top:8px;font-size:11px;color:var(--text2);background:rgba(0,0,0,.3);border-radius:6px;padding:7px 10px;display:none;text-align:left}
+.lbox-link{margin-top:16px;font-size:12px;color:var(--text2)}
+.lbox-link a{color:var(--cyan);text-decoration:none}
+/* APP */
+#app{display:none;flex-direction:column;width:100%;min-height:100vh}
+.topbar{width:100%;background:rgba(8,15,30,.98);border-bottom:1px solid rgba(1,176,192,.15);padding:10px 22px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar img{height:30px;width:auto}
+.topbar span{font-size:13px;color:var(--text2)}
+.topbar a{color:var(--cyan);font-size:12px;text-decoration:none}
+nav{width:100%;background:rgba(10,18,32,.98);border-bottom:1px solid rgba(1,176,192,.1);display:flex;padding:0 18px;overflow-x:auto;position:sticky;top:53px;z-index:39}
+.nb{padding:10px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;transition:color .15s}
+.nb.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.nb.adm{color:#c084fc}.nb.adm.active{color:var(--purple);border-bottom-color:var(--purple)}
+.content{flex:1;padding:20px;max-width:1300px;width:100%;margin:0 auto}
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.sc{background:rgba(12,22,40,.9);border:1px solid rgba(30,53,80,.8);border-radius:12px;padding:14px;position:relative;overflow:hidden}
+.sc::before{content:"";position:absolute;top:0;left:0;right:0;height:3px}
+.c1::before{background:var(--grad)}.c2::before{background:var(--mint)}.c3::before{background:var(--yellow)}.c4::before{background:var(--red)}.c5::before{background:var(--green)}
+.sn{font-size:26px;font-weight:700;color:#fff;margin-bottom:2px}.sl{font-size:12px;color:var(--text2)}
+.card{background:rgba(12,22,40,.9);border:1px solid rgba(30,53,80,.8);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.ch{padding:12px 16px;border-bottom:1px solid rgba(30,53,80,.8);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:rgba(1,176,192,.04)}
+.ch h2{font-size:14px;font-weight:600;color:var(--cyan)}
+table{width:100%;border-collapse:collapse}
+th{background:var(--navy3);padding:7px 12px;text-align:left;font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid rgba(30,53,80,.8)}
+td{padding:7px 12px;border-top:1px solid rgba(20,35,55,.8);font-size:13px;vertical-align:middle}
+tr:hover td{background:rgba(1,176,192,.03)}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.bt{background:rgba(1,176,192,.15);color:var(--cyan)}.bg{background:rgba(95,204,162,.15);color:var(--mint)}.br{background:rgba(239,68,68,.15);color:var(--red)}.by{background:rgba(245,158,11,.15);color:var(--yellow)}.bn{background:rgba(255,255,255,.07);color:var(--text2)}
+.db{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:700;display:inline-block}
+.dok{background:rgba(34,197,94,.15);color:var(--green)}.dw{background:rgba(245,158,11,.15);color:var(--yellow)}.dc{background:rgba(239,68,68,.15);color:var(--red)}
+.btn{display:inline-flex;align-items:center;padding:5px 11px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:opacity .15s}
+.btn:hover{opacity:.82}
+.bp{background:var(--grad);color:var(--navy)}
+.bd{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.bgh{background:var(--navy3);color:var(--text2);border:1px solid rgba(30,53,80,.8)}
+.bpu{background:rgba(168,85,247,.15);color:var(--purple);border:1px solid rgba(168,85,247,.3)}
+.bpu2{background:var(--navy3);color:#c084fc;border:1px solid rgba(168,85,247,.3)}
+.mo{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;align-items:center;justify-content:center}
+.mo.show{display:flex}
+.md{background:rgba(10,18,32,.98);border:1px solid rgba(1,176,192,.2);border-radius:14px;padding:22px;width:560px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+.md h3{font-size:15px;font-weight:600;margin-bottom:16px;color:var(--cyan)}
+.fg{margin-bottom:11px}
+label.fl{display:block;font-size:11px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+input[type=text],input[type=number],input[type=email],textarea,select{width:100%;background:var(--navy2);border:1px solid rgba(30,53,80,.8);border-radius:8px;padding:8px 11px;font-size:13px;color:var(--text);font-family:inherit}
+input[type=file]{display:none}
+textarea{min-height:70px;resize:vertical}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--teal)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mf{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;padding-top:12px;border-top:1px solid rgba(30,53,80,.8)}
+.cc{display:flex;flex-direction:column;gap:6px;max-height:360px;overflow-y:auto;padding:10px;background:var(--navy);border-radius:8px;margin-bottom:10px}
+.mi{background:var(--navy3);max-width:76%;padding:7px 11px;border-radius:4px 11px 11px 11px;font-size:13px;line-height:1.5;white-space:pre-wrap}
+.mo2{background:rgba(1,176,192,.1);border:1px solid rgba(1,176,192,.2);margin-left:auto;max-width:76%;padding:7px 11px;border-radius:11px 4px 11px 11px;font-size:13px;line-height:1.5;white-space:pre-wrap}
+.mt{font-size:10px;color:var(--text2);margin-top:2px}
+.tc{display:none}.tc.active{display:block}
+.sep{border:none;border-top:1px solid rgba(30,53,80,.8);margin:12px 0}
+.pay-sec{background:rgba(245,158,11,.04);border:1px solid rgba(245,158,11,.15);border-radius:8px;padding:12px;margin-top:4px}
+.pay-label{font-size:11px;font-weight:600;color:var(--yellow);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.ev-drop{background:rgba(1,176,192,.06);border:1px dashed rgba(1,176,192,.35);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:6px}
+.ev-drop:hover{background:rgba(1,176,192,.12)}
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--grad);color:var(--navy);padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;display:none;z-index:200;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+input[type=date]{
+  background:transparent;border:none;font-size:12px;
+  color:var(--text);font-family:inherit;outline:none;cursor:pointer;
+  color-scheme:dark;
+}
+input[type=date]::-webkit-calendar-picker-indicator{
+  filter:invert(1) opacity(0.5);cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ LOGIN ═══════════════ -->
+<div id="login">
+<div class="lbox">
+  <img id="logo-img" src="/static/logo.jpg" alt="Recupero 24/7" onerror="this.style.display='none'">
+  <div class="lbox-brand">Panel de Administracion</div>
+  <div class="lbox-sub">Recupero 24/7 &mdash; Asistente Virtual</div>
+  <input type="password" id="apiKey" placeholder="Ingrese su API Key" autocomplete="current-password">
+  <button type="button" id="btnLogin">INGRESAR AL SISTEMA</button>
+  <div id="loginStatus"></div>
+  <div id="diagInfo"></div>
+  <div class="lbox-link"><a href="https://recuperotusdatos.com" target="_blank">recuperotusdatos.com</a></div>
+</div>
+</div>
+
+<!-- ═══════════════ APP ═══════════════ -->
+<div id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <img id="logo-top" src="/static/logo.jpg" alt="R24/7" onerror="this.style.display='none'">
+      <span>Recupero 24/7 &mdash; Panel Admin</span>
+    </div>
+    <a href="https://recuperotusdatos.com" target="_blank">recuperotusdatos.com</a>
+  </div>
+
+  <!-- NAV -->
+  <nav>
+    <button class="nb active" id="nb-dashboard">Dashboard</button>
+    <button class="nb" id="nb-tickets">Atenciones</button>
+    <button class="nb" id="nb-casos">Casos</button>
+    <button class="nb" id="nb-services">Servicios</button>
+    <button class="nb" id="nb-faq">FAQs</button>
+    <button class="nb" id="nb-conversations">Conversaciones</button>
+    <button class="nb" id="nb-query">Consultar Caso</button>
+    <button class="nb adm" id="nb-admin">&#9881; Administracion</button>
+  </nav>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- ─── DASHBOARD ─── -->
+    <div id="tab-dashboard" class="tc active">
+      <div class="sg">
+        <div class="sc c1"><div class="sn" id="s1">-</div><div class="sl">Conversaciones</div></div>
+        <div class="sc c2"><div class="sn" id="s2">-</div><div class="sl">Mensajes</div></div>
+        <div class="sc c3"><div class="sn" id="s3">-</div><div class="sl">Hoy</div></div>
+        <div class="sc c4"><div class="sn" id="s4">-</div><div class="sl">Tickets abiertos</div></div>
+        <div class="sc c5"><div class="sn" id="s5">-</div><div class="sl">Casos pendientes</div></div>
+      </div>
+      <div class="card">
+        <div class="ch">
+          <h2>Casos en atencion</h2>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <select id="f-tecnico" style="background:var(--navy2);border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:12px;color:var(--text);font-family:inherit"><option value="">Todos los tecnicos</option></select>
+            <div style="display:flex;align-items:center;gap:4px;background:var(--navy2);border:1px solid var(--border);border-radius:6px;padding:4px 8px">
+              <span style="font-size:11px;color:var(--text2)">Desde</span>
+              <input type="date" id="f-desde" style="background:transparent;border:none;font-size:12px;color:var(--text);font-family:inherit;outline:none;cursor:pointer;color-scheme:dark">
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;background:var(--navy2);border:1px solid var(--border);border-radius:6px;padding:4px 8px">
+              <span style="font-size:11px;color:var(--text2)">Hasta</span>
+              <input type="date" id="f-hasta" style="background:transparent;border:none;font-size:12px;color:var(--text);font-family:inherit;outline:none;cursor:pointer;color-scheme:dark">
+            </div>
+            <button type="button" class="btn bp" style="font-size:11px" id="btnFiltrar">Filtrar</button>
+            <button type="button" class="btn bgh" style="font-size:11px" id="btnLimpiar">Limpiar</button>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>Caso</th><th>Cliente</th><th>Dispositivo</th><th>Resumen</th><th>Tecnico</th><th>Estado</th><th>Pago</th><th>Evidencia</th><th>Dias</th><th>Creado</th></tr></thead>
+          <tbody id="tb-casos-dash"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="ch"><h2>Solicitudes recientes</h2></div>
+        <table>
+          <thead><tr><th>Ticket</th><th>Cliente</th><th>Telefono</th><th>Dispositivo</th><th>Urgencia</th><th>Fecha</th><th>Accion</th></tr></thead>
+          <tbody id="tb-leads"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── ATENCIONES ─── -->
+    <div id="tab-tickets" class="tc">
+      <div class="card">
+        <div class="ch"><h2>Panel de Atenciones</h2></div>
+        <table>
+          <thead><tr><th>Ticket</th><th>Cliente</th><th>Email</th><th>Telefono</th><th>Resumen</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead>
+          <tbody id="tb-tickets"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── CASOS ─── -->
+    <div id="tab-casos" class="tc">
+      <div class="card">
+        <div class="ch"><h2>Casos Tecnicos</h2><button type="button" class="btn bp" id="btnNuevoCaso">+ Nuevo caso</button></div>
+        <table>
+          <thead><tr><th>Caso</th><th>Ticket</th><th>Cliente</th><th>Dispositivo</th><th>Resumen</th><th>Tecnico</th><th>Estado</th><th>Pago</th><th>Ev.</th><th>Dias</th><th>Acciones</th></tr></thead>
+          <tbody id="tb-casos"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── SERVICIOS ─── -->
+    <div id="tab-services" class="tc">
+      <div class="card">
+        <div class="ch"><h2>Catalogo de Servicios</h2><button type="button" class="btn bp" id="btnNuevoSvc">+ Nuevo</button></div>
+        <table>
+          <thead><tr><th>Codigo</th><th>Nombre</th><th>Precio</th><th>Tiempo</th><th>Cat.</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="tb-svcs"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── FAQs ─── -->
+    <div id="tab-faq" class="tc">
+      <div class="card">
+        <div class="ch"><h2>Preguntas Frecuentes</h2><button type="button" class="btn bp" id="btnNuevoFaq">+ Nueva FAQ</button></div>
+        <table>
+          <thead><tr><th>Pregunta</th><th>Keywords</th><th>Acciones</th></tr></thead>
+          <tbody id="tb-faq"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── CONVERSACIONES ─── -->
+    <div id="tab-conversations" class="tc">
+      <div class="card">
+        <div class="ch"><h2>Conversaciones</h2></div>
+        <table>
+          <thead><tr><th>Ticket</th><th>Telefono</th><th>Cliente</th><th>Estado</th><th>Msgs</th><th>Ultimo</th><th>Actualizado</th><th></th></tr></thead>
+          <tbody id="tb-conv"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── CONSULTAR CASO ─── -->
+    <div id="tab-query" class="tc">
+      <div class="card" style="max-width:460px;margin:0 auto">
+        <div class="ch"><h2>Consultar Estado de Caso</h2></div>
+        <div style="padding:20px">
+          <div class="fg">
+            <label class="fl">Numero de caso</label>
+            <input type="text" id="q-input" placeholder="CASO-0001" style="font-size:15px;text-align:center">
+          </div>
+          <button type="button" class="btn bp" id="btnQuery" style="width:100%;justify-content:center;padding:10px">Consultar</button>
+          <div id="q-result" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── ADMINISTRACION ─── -->
+    <div id="tab-admin" class="tc">
+      <div class="admin-grid">
+
+        <div class="card">
+          <div class="ch"><h2 style="color:var(--purple)">Tecnicos</h2><button type="button" class="btn bpu" id="btnNuevoTec">+ Nuevo</button></div>
+          <table><thead><tr><th>Nombre</th><th>Email</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="tb-tec"></tbody></table>
+        </div>
+
+        <div class="card">
+          <div class="ch"><h2 style="color:var(--purple)">Resumenes / Sintomas</h2><button type="button" class="btn bpu" id="btnNuevoSin">+ Nuevo</button></div>
+          <table><thead><tr><th>Descripcion</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="tb-sin"></tbody></table>
+        </div>
+
+        <div class="card" style="grid-column:1/-1">
+          <div class="ch"><h2 style="color:var(--purple)">Estados de Casos</h2><button type="button" class="btn bpu" id="btnNuevoEstado">+ Nuevo estado</button></div>
+          <table><thead><tr><th>Clave interna</th><th>Etiqueta visible</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="tb-estados"></tbody></table>
+        </div>
+
+        <div class="card" style="grid-column:1/-1">
+          <div class="ch"><h2 style="color:var(--yellow)">&#128176; Estados de Pago</h2><button type="button" class="btn" style="background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3)" id="btnNuevoPago">+ Nuevo</button></div>
+          <table><thead><tr><th>Clave interna</th><th>Etiqueta visible</th><th>Color</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="tb-pago"></tbody></table>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════ MODALES ═══════════════ -->
+
+<!-- MODAL ATENCION (formulario de contacto con cliente) -->
+<div class="mo" id="mo-atencion">
+<div class="md" style="width:580px">
+  <h3 id="at-t">&#128222; Atencion al Cliente</h3>
+  <input type="hidden" id="at-ticket">
+  <div style="background:rgba(1,176,192,.06);border:1px solid rgba(1,176,192,.15);border-radius:10px;padding:14px;margin-bottom:14px">
+    <div style="font-size:11px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Datos del cliente</div>
+    <div class="fr" style="margin-bottom:10px">
+      <div><span style="font-size:11px;color:var(--text2)">Ticket</span><div id="at-info-ticket" style="font-weight:700;color:var(--cyan);font-size:14px;margin-top:2px">-</div></div>
+      <div><span style="font-size:11px;color:var(--text2)">Telefono</span><div id="at-info-phone" style="font-size:13px;margin-top:2px">-</div></div>
+    </div>
+    <div class="fr">
+      <div class="fg" style="margin-bottom:8px"><label class="fl">Nombre</label>
+        <input type="text" id="at-nombre" placeholder="Nombre del cliente">
+      </div>
+      <div class="fg" style="margin-bottom:8px"><label class="fl">Apellidos</label>
+        <input type="text" id="at-apellidos" placeholder="Apellidos del cliente">
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:8px"><label class="fl">Correo electronico</label>
+      <input type="email" id="at-email" placeholder="correo@ejemplo.com">
+    </div>
+    <div class="fg" style="margin-bottom:0"><label class="fl">Solicitud registrada por el bot</label>
+      <div id="at-resumen-bot" style="font-size:12px;color:var(--text2);line-height:1.5;white-space:pre-wrap">-</div>
+    </div>
+  </div>
+  <hr class="sep">
+  <div style="font-size:12px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Acuerdo con el cliente</div>
+  <div class="fg"><label class="fl">Resumen del acuerdo / diagnostico inicial</label>
+    <textarea id="at-acuerdo" placeholder="Describa el acuerdo alcanzado con el cliente: diagnostico, precio pactado, plazo de entrega, condiciones especiales..." style="min-height:100px"></textarea>
+  </div>
+  <div class="fg"><label class="fl">Estado del ticket</label>
+    <select id="at-status">
+      <option value="abierto">Abierto</option>
+      <option value="en_proceso">En proceso</option>
+      <option value="cerrado">Cerrado</option>
+    </select>
+  </div>
+  <hr class="sep">
+  <div style="font-size:12px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Crear caso tecnico</div>
+  <div style="background:rgba(168,85,247,.05);border:1px solid rgba(168,85,247,.15);border-radius:10px;padding:14px">
+    <div class="fr">
+      <div class="fg"><label class="fl">Tecnico asignado</label><select id="at-tech"><option value="Sin asignar">Sin asignar</option></select></div>
+      <div class="fg"><label class="fl">Dispositivo</label><input type="text" id="at-device" placeholder="HDD Seagate 1TB"></div>
+    </div>
+    <div class="fg"><label class="fl">Resumen / Sintoma</label>
+      <select id="at-resumen"><option value="">Seleccionar...</option></select>
+    </div>
+    <div class="fg"><label class="fl">Notas adicionales para el caso</label>
+      <input type="text" id="at-notas" placeholder="Informacion adicional para el tecnico...">
+    </div>
+  </div>
+  <div class="mf">
+    <button type="button" class="btn bgh" id="btnCancelAtencion">Cancelar</button>
+    <button type="button" class="btn bgh" id="btnSaveAtencion">Guardar acuerdo</button>
+    <button type="button" class="btn bp" id="btnCrearCasoAtencion">Guardar y crear caso</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL CASO -->
+<div class="mo" id="mo-caso">
+<div class="md">
+  <h3 id="mc-t">Nuevo Caso</h3>
+  <input type="hidden" id="mc-orig">
+  <div class="fr">
+    <div class="fg"><label class="fl">Ticket origen</label><input type="text" id="mc-ticket" placeholder="RTD-0001"></div>
+    <div class="fg"><label class="fl">Telefono</label><input type="text" id="mc-phone"></div>
+  </div>
+  <div class="fr">
+    <div class="fg"><label class="fl">Nombre del cliente</label><input type="text" id="mc-name"></div>
+    <div class="fg"><label class="fl">Tecnico asignado</label><select id="mc-tech"><option value="Sin asignar">Sin asignar</option></select></div>
+  </div>
+  <div class="fr">
+    <div class="fg"><label class="fl">Dispositivo</label><input type="text" id="mc-device"></div>
+    <div class="fg"><label class="fl">Estado del caso</label><select id="mc-status"></select></div>
+  </div>
+  <div class="fg"><label class="fl">Resumen / Sintoma</label><select id="mc-resumen"><option value="">Seleccionar resumen...</option></select></div>
+  <div class="fg"><label class="fl">Resumen personalizado</label><input type="text" id="mc-resumen-custom" placeholder="O escriba aqui..."></div>
+  <div class="fg"><label class="fl">Descripcion y seguimiento</label><textarea id="mc-desc"></textarea></div>
+  <hr class="sep">
+  <div class="pay-sec">
+    <div class="pay-label">Informacion de Pago</div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Estado de pago</label>
+        <select id="mc-pago">
+          <option value="">Sin estado de pago</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Evidencia de pago</label>
+        <input type="file" id="mc-file" accept=".pdf,.jpg,.jpeg,.png">
+        <div class="ev-drop" id="ev-dropzone" onclick="document.getElementById('mc-file').click()">
+          <span style="font-size:18px">&#128206;</span>
+          <div style="flex:1;font-size:12px;color:var(--text2)"><b id="ev-nombre" style="color:var(--cyan)">Adjuntar archivo</b><br>PDF, JPG o PNG &mdash; max 5MB</div>
+          <button type="button" class="btn bgh" style="font-size:11px;display:none" id="ev-ver-btn" onclick="verEvidencia(event)">Ver</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="mf">
+    <button type="button" class="btn bgh" id="btnCancelCaso">Cancelar</button>
+    <button type="button" class="btn bp" id="btnSaveCaso">Guardar caso</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL SERVICIO -->
+<div class="mo" id="mo-svc">
+<div class="md">
+  <h3 id="ms-t">Nuevo Servicio</h3>
+  <input type="hidden" id="ms-orig">
+  <div class="fr">
+    <div class="fg"><label class="fl">Codigo</label><input type="text" id="ms-code"></div>
+    <div class="fg"><label class="fl">Categoria</label><select id="ms-cat"><option>disco</option><option>flash</option><option>servidor</option><option>movil</option><option>diagnostico</option></select></div>
+  </div>
+  <div class="fg"><label class="fl">Nombre</label><input type="text" id="ms-name"></div>
+  <div class="fg"><label class="fl">Descripcion</label><textarea id="ms-desc"></textarea></div>
+  <div class="fr">
+    <div class="fg"><label class="fl">Precio (S/)</label><input type="number" id="ms-price"></div>
+    <div class="fg"><label class="fl">Tiempo estimado</label><input type="text" id="ms-time"></div>
+  </div>
+  <div class="fg"><label class="fl">Disponible</label><select id="ms-avail"><option value="true">Si visible en bot</option><option value="false">No oculto</option></select></div>
+  <div class="mf">
+    <button type="button" class="btn bgh" id="btnCancelSvc">Cancelar</button>
+    <button type="button" class="btn bp" id="btnSaveSvc">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL FAQ -->
+<div class="mo" id="mo-faq">
+<div class="md">
+  <h3 id="mf-t">Nueva FAQ</h3>
+  <input type="hidden" id="mf-id">
+  <div class="fg"><label class="fl">Pregunta</label><input type="text" id="mf-q"></div>
+  <div class="fg"><label class="fl">Respuesta</label><textarea id="mf-a"></textarea></div>
+  <div class="fg"><label class="fl">Keywords (coma)</label><input type="text" id="mf-k"></div>
+  <div class="mf">
+    <button type="button" class="btn bgh" id="btnCancelFaq">Cancelar</button>
+    <button type="button" class="btn bp" id="btnSaveFaq">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL TECNICO -->
+<div class="mo" id="mo-tec">
+<div class="md" style="width:420px">
+  <h3 id="mt-t">Nuevo Tecnico</h3>
+  <input type="hidden" id="mt-id">
+  <div class="fg"><label class="fl">Nombre</label><input type="text" id="mt-nombre"></div>
+  <div class="fg"><label class="fl">Email</label><input type="email" id="mt-email"></div>
+  <div class="fg"><label class="fl">Estado</label><select id="mt-activo"><option value="true">Activo</option><option value="false">Inactivo</option></select></div>
+  <div class="mf">
+    <button type="button" class="btn bgh" id="btnCancelTec">Cancelar</button>
+    <button type="button" class="btn bpu" id="btnSaveTec">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL SINTOMA -->
+<div class="mo" id="mo-sin">
+<div class="md" style="width:420px">
+  <h3 id="msi-t">Nuevo Resumen</h3>
+  <input type="hidden" id="msi-id">
+  <div class="fg"><label class="fl">Descripcion</label><input type="text" id="msi-nombre"></div>
+  <div class="fg"><label class="fl">Estado</label><select id="msi-activo"><option value="true">Activo</option><option value="false">Inactivo</option></select></div>
+  <div class="mf">
+    <button type="button" class="btn bgh" id="btnCancelSin">Cancelar</button>
+    <button type="button" class="btn bpu" id="btnSaveSin">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL ESTADO CASO -->
+<div class="mo" id="mo-estado">
+<div class="md" style="width:420px">
+  <h3 id="me-t">Nuevo Estado</h3>
+  <input type="hidden" id="me-id">
+  <div class="fg"><label class="fl">Clave interna (sin espacios)</label><input type="text" id="me-nombre" placeholder="ej: en_diagnostico"></div>
+  <div class="fg"><label class="fl">Etiqueta visible</label><input type="text" id="me-label" placeholder="ej: En diagnostico"></div>
+  <div class="fr">
+    <div class="fg"><label class="fl">Orden</label><input type="number" id="me-orden" value="10"></div>
+    <div class="fg"><label class="fl">Activo</label><select id="me-activo"><option value="true">Activo</option><option value="false">Inactivo</option></select></div>
+  </div>
+  <div class="mf">
+    <button type="button" class="btn bgh" id="btnCancelEstado">Cancelar</button>
+    <button type="button" class="btn bpu" id="btnSaveEstado">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL ESTADO PAGO -->
+<div class="mo" id="mo-pago">
+<div class="md" style="width:440px">
+  <h3 id="mp-t">Nuevo Estado de Pago</h3>
+  <input type="hidden" id="mp-id">
+  <div class="fg"><label class="fl">Clave interna (sin espacios)</label><input type="text" id="mp-nombre" placeholder="ej: por_cancelar"></div>
+  <div class="fg"><label class="fl">Etiqueta visible</label><input type="text" id="mp-label" placeholder="ej: Por cancelar"></div>
+  <div class="fr">
+    <div class="fg"><label class="fl">Color del badge</label>
+      <select id="mp-color">
+        <option value="bn">Gris</option><option value="by">Amarillo</option>
+        <option value="bg">Verde</option><option value="br">Rojo</option><option value="bt">Teal</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Orden</label><input type="number" id="mp-orden" value="10"></div>
+  </div>
+  <div class="fg"><label class="fl">Estado</label><select id="mp-activo"><option value="true">Activo</option><option value="false">Inactivo</option></select></div>
+  <div class="mf">
+    <button type="button" class="btn bgh" id="btnCancelPago">Cancelar</button>
+    <button type="button" class="btn" style="background:rgba(245,158,11,.2);color:var(--yellow);border:1px solid rgba(245,158,11,.3)" id="btnSavePago">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL CHAT -->
+<div class="mo" id="mo-chat">
+<div class="md" style="width:600px">
+  <h3 id="mch-t">Conversacion</h3>
+  <div class="cc" id="chat-msgs"></div>
+  <div class="mf"><button type="button" class="btn bgh" id="btnCancelChat">Cerrar</button></div>
+</div>
+</div>
+
+<!-- MODAL EVIDENCIA -->
+<div class="mo" id="mo-ev">
+<div class="md" style="width:680px;text-align:center">
+  <h3 id="mev-t">Evidencia de pago</h3>
+  <div id="ev-viewer" style="margin:16px 0"></div>
+  <div class="mf"><button type="button" class="btn bgh" id="btnCancelEv">Cerrar</button></div>
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+
+var BASE='',KEY='';
+var ESTADOS_CACHE={};
+var PAGOS_CACHE={};   // nombre -> {label,color,activo,orden} (tabla estados_pago)
+// Fallback si la tabla estados_pago aun no responde
+var PL={pendiente:'Pend. pago',pagado:'Pagado',por_cancelar:'Por cancelar',cancelado:'Cancelado'};
+var PB={pendiente:'by',pagado:'bg',por_cancelar:'by',cancelado:'br'};
+var currentEvB64=null,currentEvTipo=null,currentEvNombre=null;
+
+var LOGO='/static/logo.jpg';
+window.addEventListener('load',function(){['logo-img','logo-top'].forEach(function(id){var e=document.getElementById(id);if(e)e.src=LOGO;});});
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmt(d){return d?new Date(d).toLocaleString('es-PE'):'-';}
+function fmtD(d){return d?new Date(d).toLocaleDateString('es-PE'):'-';}
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+function showModal(id){document.getElementById(id).classList.add('show');}
+function setStatus(m,t){var e=document.getElementById('loginStatus');e.textContent=m;e.className=t||'info';e.style.display='block';}
+function diasBadge(d){var n=parseInt(d)||0;var c=n<=3?'dok':n<=7?'dw':'dc';return '<span class="db '+c+'">'+n+'d</span>';}
+function estadoBadge(status){var e=ESTADOS_CACHE[status];return e?'<span class="badge bt">'+esc(e)+'</span>':'<span class="badge bn">'+esc(status||'-')+'</span>';}
+function pagoBadge(pago){if(!pago)return '-';var p=PAGOS_CACHE[pago];var label=p?p.label:(PL[pago]||pago);var color=p?(p.color||'bn'):(PB[pago]||'bn');return '<span class="badge '+esc(color)+'">'+esc(label)+'</span>';}
+
+function api(path,opts){
+  var h={'Content-Type':'application/json','x-admin-key':KEY};
+  var o={method:'GET',headers:h};
+  if(opts){if(opts.method)o.method=opts.method;if(opts.body)o.body=opts.body;}
+  return fetch(BASE+path,o).then(function(r){if(!r.ok){return r.json().then(function(e){throw new Error(e.error||'Error '+r.status);});}return r.json();});
+}
+function apiPost(p,d){return api(p,{method:'POST',body:JSON.stringify(d)});}
+function apiPut(p,d){return api(p,{method:'PUT',body:JSON.stringify(d)});}
+function apiDel(p){return api(p,{method:'DELETE'});}
+
+function doLogin(){
+  var key = document.getElementById('apiKey').value.trim();
+  var diagEl = document.getElementById('diagInfo');
+  if(!key){ setStatus('Ingrese su API Key.','err'); return; }
+  BASE = window.location.protocol==='file:' ? 'http://localhost:8080' : window.location.origin;
+  KEY = key;
+  setStatus('Conectando con el servidor...','info');
+  diagEl.style.display='none';
+  // Step 1: ping (no auth needed)
+  fetch(BASE+'/api/admin/ping', {method:'GET'})
+    .then(function(r){
+      if(!r.ok) throw new Error('Servidor no responde ('+r.status+')');
+      return r.json();
+    })
+    .then(function(p){
+      diagEl.style.display='block';
+      diagEl.textContent = 'Servidor: OK | ADMIN_API_KEY: '+(p.hasKey?'Configurada':'NO configurada')+' | DB: '+(p.db?'OK':'sin config');
+      if(!p.hasKey){
+        setStatus('Error: ADMIN_API_KEY no esta configurada en Azure App Service.','err');
+        return;
+      }
+      setStatus('Verificando credenciales...','info');
+      // Step 2: authenticate
+      fetch(BASE+'/api/admin/stats', {
+        method:'GET',
+        headers:{'Content-Type':'application/json','x-admin-key':key}
+      })
+      .then(function(r){
+        if(r.status===401) throw new Error('API Key incorrecta. Revise la variable ADMIN_API_KEY.');
+        if(r.status===503) throw new Error('Servidor no disponible (503).');
+        if(!r.ok) throw new Error('Error del servidor: '+r.status);
+        return r.json();
+      })
+      .then(function(){
+        // SUCCESS
+        document.getElementById('login').style.display='none';
+        document.getElementById('app').style.display='flex';
+        loadDashboard();
+      })
+      .catch(function(e){
+        setStatus(e.message,'err');
+      });
+    })
+    .catch(function(e){
+      setStatus('No se pudo conectar al servidor: '+e.message+' | URL: '+BASE,'err');
+      diagEl.style.display='block';
+      diagEl.textContent = 'Intento de conexion a: '+BASE+'/api/admin/ping';
+    });
+}
+/* date inputs handled natively */
+
+/* ── NAV ───────────────────────────────────────────────── */
+var tabLoaders={};
+
+// Event delegation - handles all dynamic button clicks
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('[data-action]');
+  if (!btn) return;
+  var action = btn.dataset.action;
+  if (action === 'viewEv') { viewEvByNum(btn.dataset.num); }
+  else if (action === 'editCaso') { editCasoBtn(btn); }
+  else if (action === 'delCaso') { delCasoBtn(btn); }
+});
+
+document.addEventListener('DOMContentLoaded',function(){
+  // Login — MUST be inside DOMContentLoaded
+  var bl=document.getElementById('btnLogin');
+  if(bl){
+    bl.addEventListener('click',doLogin);
+    document.getElementById('apiKey').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+  }
+  ['dashboard','tickets','casos','services','faq','conversations','query','admin'].forEach(function(n){
+    var b=document.getElementById('nb-'+n);if(!b)return;
+    b.addEventListener('click',function(){
+      document.querySelectorAll('.nb').forEach(function(x){x.classList.remove('active');});
+      document.querySelectorAll('.tc').forEach(function(x){x.classList.remove('active');});
+      b.classList.add('active');document.getElementById('tab-'+n).classList.add('active');
+      if(tabLoaders[n])tabLoaders[n]();
+    });
+  });
+  document.querySelectorAll('.mo').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('show');});});
+  document.getElementById('btnNuevoCaso').addEventListener('click',function(){openCasoFrom('','','','','');});
+  var bca=document.getElementById('btnCancelAtencion');
+  if(bca) bca.addEventListener('click',function(){closeModal('mo-atencion');});
+  var bsa=document.getElementById('btnSaveAtencion');
+  if(bsa) bsa.addEventListener('click',function(){saveAtencionHandler(false);});
+  var bcaa=document.getElementById('btnCrearCasoAtencion');
+  if(bcaa) bcaa.addEventListener('click',function(){saveAtencionHandler(true);});
+  document.getElementById('btnNuevoSvc').addEventListener('click',openSvcModal);
+  document.getElementById('btnNuevoFaq').addEventListener('click',openFaqModal);
+  document.getElementById('btnNuevoTec').addEventListener('click',openTecModal);
+  document.getElementById('btnNuevoSin').addEventListener('click',openSinModal);
+  document.getElementById('btnNuevoEstado').addEventListener('click',openEstadoModal);
+  var bnp=document.getElementById('btnNuevoPago');
+  if(bnp) bnp.addEventListener('click',openPagoModal);
+  var bsp=document.getElementById('btnSavePago');
+  if(bsp) bsp.addEventListener('click',savePagoHandler);
+  var bcp=document.getElementById('btnCancelPago');
+  if(bcp) bcp.addEventListener('click',function(){closeModal('mo-pago');});
+  document.getElementById('btnSaveCaso').addEventListener('click',saveCasoHandler);
+  document.getElementById('btnSaveSvc').addEventListener('click',saveSvcHandler);
+  document.getElementById('btnSaveFaq').addEventListener('click',saveFaqHandler);
+  document.getElementById('btnSaveTec').addEventListener('click',saveTecHandler);
+  document.getElementById('btnSaveSin').addEventListener('click',saveSinHandler);
+  document.getElementById('btnSaveEstado').addEventListener('click',saveEstadoHandler);
+  ['Caso','Svc','Faq','Tec','Sin','Estado','Chat','Ev'].forEach(function(x){
+    var b=document.getElementById('btnCancel'+x);if(b)b.addEventListener('click',function(){closeModal('mo-'+x.toLowerCase());});
+  });
+  document.getElementById('btnQuery').addEventListener('click',queryCasoHandler);
+  document.getElementById('q-input').addEventListener('keydown',function(e){if(e.key==='Enter')queryCasoHandler();});
+  document.getElementById('btnFiltrar').addEventListener('click',loadCasosDash);
+  var blim = document.getElementById('btnLimpiar');
+  if(blim) blim.addEventListener('click',function(){
+    document.getElementById('f-tecnico').value='';
+    document.getElementById('f-desde').value='';
+    document.getElementById('f-hasta').value='';
+    loadCasosDash();
+  });
+  // file input
+  document.getElementById('mc-file').addEventListener('change',handleFileSelect);
+});
+
+/* ── DASHBOARD ─────────────────────────────────────────── */
+function loadDashboard(){
+  loadEstadosCache(function(){
+    api('/api/admin/stats').then(function(d){
+      document.getElementById('s1').textContent=d.total_conversations||0;
+      document.getElementById('s2').textContent=d.total_messages||0;
+      document.getElementById('s3').textContent=d.messages_today||0;
+      document.getElementById('s4').textContent=d.open_tickets||0;
+      document.getElementById('s5').textContent=d.casos_pendientes||0;
+      var leads=d.recent_leads||[];
+      var h='';
+      if(!leads.length)h='<tr><td colspan="7" style="text-align:center;color:var(--text2);padding:16px">Sin solicitudes</td></tr>';
+      else leads.slice(0,8).forEach(function(l){
+        var ctx=l.context||{};
+        h+='<tr><td><span class="badge bt">'+esc(l.ticket_number||'-')+'</span></td>'+
+          '<td><b>'+esc(l.name||'-')+'</b></td>'+
+          '<td style="font-size:12px;color:var(--text2)">'+esc(l.phone)+'</td>'+
+          '<td>'+esc(ctx.device||'-')+'</td>'+
+          '<td>'+esc(ctx.urgency||'-')+'</td>'+
+          '<td style="font-size:11px;color:var(--text2)">'+fmt(l.updated_at)+'</td>'+
+          '<td><button class="btn bp" style="font-size:11px" data-t="'+esc(l.ticket_number)+'" data-p="'+esc(l.phone)+'" data-n="'+esc(l.name||'')+'" data-d="'+esc(ctx.device||'')+'" data-s="'+esc(ctx.symptom||'')+'" onclick="openCasoFromBtn(this)">Crear caso</button></td></tr>';
+      });
+      document.getElementById('tb-leads').innerHTML=h;
+    });
+    loadCasosDash();
+    loadTecnicosSelect();
+  });
+}
+tabLoaders.dashboard=loadDashboard;
+
+function loadEstadosCache(cb){
+  Promise.all([
+    api('/api/admin/estados').then(function(rows){ESTADOS_CACHE={};rows.forEach(function(e){ESTADOS_CACHE[e.nombre]=e.label;});}),
+    api('/api/admin/pagos').then(function(rows){PAGOS_CACHE={};rows.forEach(function(p){PAGOS_CACHE[p.nombre]=p;});}).catch(function(){})
+  ]).then(function(){if(cb)cb();}).catch(function(e){toast('Error: '+e.message);if(cb)cb();});
+}
+
+function loadCasosDash(){
+  var tec=document.getElementById('f-tecnico').value;
+  var desdeVal=document.getElementById('f-desde').value;
+  var hastaVal=document.getElementById('f-hasta').value;
+  var s=desdeVal?new Date(desdeVal+'T00:00:00'):null;
+  var e=hastaVal?new Date(hastaVal+'T23:59:59'):null;
+  api('/api/admin/casos').then(function(rows){
+    var f=rows.filter(function(c){
+      var st=c.status;if(st==='listo_recoger'||st==='cancelado'||c.pago==='cancelado')return false;
+      if(tec&&c.technician!==tec)return false;
+      if(s){var cd=new Date(c.created_at);cd.setHours(0,0,0,0);if(cd<s)return false;}
+      if(e){var cd=new Date(c.created_at);cd.setHours(0,0,0,0);var ee=new Date(e);ee.setHours(23,59,59,0);if(cd>ee)return false;}
+      return true;
+    });
+    var h='';
+    if(!f.length)h='<tr><td colspan="10" style="text-align:center;color:var(--text2);padding:16px">Sin casos activos</td></tr>';
+    else f.forEach(function(c){
+      h+='<tr>'+
+        '<td><span class="badge bt">'+esc(c.caso_number)+'</span></td>'+
+        '<td><b>'+esc(c.name||'-')+'</b></td>'+
+        '<td>'+esc(c.device||'-')+'</td>'+
+        '<td style="font-size:12px;max-width:140px">'+esc(c.resumen||'-')+'</td>'+
+        '<td style="color:var(--cyan)">'+esc(c.technician||'-')+'</td>'+
+        '<td>'+estadoBadge(c.status)+'</td>'+
+        '<td>'+pagoBadge(c.pago)+'</td>'+
+        '<td>'+(c.evidencia_nombre?'<button class="btn bp" style="font-size:10px;padding:3px 7px" data-num="'+esc(c.caso_number)+'" onclick="evBtnClick(this)">'+esc(c.evidencia_tipo&&c.evidencia_tipo.includes('pdf')?'PDF':'IMG')+'</button>':'-')+'</td>'+
+        '<td>'+diasBadge(c.dias_abierto)+'</td>'+
+        '<td style="font-size:11px;color:var(--text2)">'+fmtD(c.created_at)+'</td>'+
+        '</tr>';
+    });
+    document.getElementById('tb-casos-dash').innerHTML=h;
+  });
+}
+
+function loadTecnicosSelect(cur){
+  api('/api/admin/tecnicos').then(function(rows){
+    var sf=document.getElementById('f-tecnico');
+    var cv=sf.value;sf.innerHTML='<option value="">Todos los tecnicos</option><option value="Sin asignar"'+(cv==='Sin asignar'?' selected':'')+'>Sin asignar</option>';
+    var opts='<option value="Sin asignar">Sin asignar</option>';
+    rows.filter(function(t){return t.activo&&t.nombre!=='Sin asignar';}).forEach(function(t){
+      sf.innerHTML+='<option value="'+esc(t.nombre)+'"'+(cv===t.nombre?' selected':'')+'>'+esc(t.nombre)+'</option>';
+      opts+='<option value="'+esc(t.nombre)+'">'+esc(t.nombre)+'</option>';
+    });
+    ['mc-tech','at-tech'].forEach(function(id){
+      var sel=document.getElementById(id);if(!sel)return;
+      sel.innerHTML=opts;
+      if(cur){sel.value=cur;if(sel.value!==cur){sel.innerHTML+='<option value="'+esc(cur)+'">'+esc(cur)+'</option>';sel.value=cur;}}
+    });
+  });
+}
+
+function loadPagosSelect(cur){
+  api('/api/admin/pagos').then(function(rows){
+    var sel=document.getElementById('mc-pago');
+    sel.innerHTML='<option value="">Sin estado de pago</option>';
+    rows.filter(function(p){return p.activo;}).sort(function(a,b){return a.orden-b.orden;}).forEach(function(p){
+      sel.innerHTML+='<option value="'+esc(p.nombre)+'"'+(cur===p.nombre?' selected':'')+'>'+esc(p.label)+'</option>';
+    });
+    // Estado guardado que ya no esta activo: mostrarlo igual para no perderlo al editar
+    if(cur&&sel.value!==cur){sel.innerHTML+='<option value="'+esc(cur)+'" selected>'+esc(PAGOS_CACHE[cur]?PAGOS_CACHE[cur].label:cur)+'</option>';}
+  }).catch(function(){});
+}
+
+function loadEstadosSelect(cur){
+  api('/api/admin/estados').then(function(rows){
+    var sel=document.getElementById('mc-status');
+    sel.innerHTML='';
+    rows.filter(function(e){return e.activo;}).sort(function(a,b){return a.orden-b.orden;}).forEach(function(e){
+      sel.innerHTML+='<option value="'+esc(e.nombre)+'"'+(cur===e.nombre?' selected':'')+'>'+esc(e.label)+'</option>';
+    });
+  });
+}
+
+function loadSintomasSelect(cur){
+  api('/api/admin/sintomas').then(function(rows){
+    var opts='<option value="">Seleccionar resumen...</option>';
+    rows.filter(function(s){return s.activo;}).forEach(function(s){
+      opts+='<option value="'+esc(s.nombre)+'"'+(cur===s.nombre?' selected':'')+'>'+esc(s.nombre)+'</option>';
+    });
+    ['mc-resumen','at-resumen'].forEach(function(id){var sel=document.getElementById(id);if(sel)sel.innerHTML=opts;});
+  });
+}
+
+function openCasoFromBtn(btn){openCasoFrom(btn.dataset.t,btn.dataset.p,btn.dataset.n,btn.dataset.d,btn.dataset.s);}
+function openCasoFrom(t,p,n,d,s){
+  document.getElementById('mc-t').textContent='Nuevo Caso';
+  document.getElementById('mc-orig').value='';
+  document.getElementById('mc-ticket').value=t||'';document.getElementById('mc-phone').value=p||'';
+  document.getElementById('mc-name').value=n||'';document.getElementById('mc-device').value=d||'';
+  document.getElementById('mc-resumen-custom').value=s||'';document.getElementById('mc-desc').value='';
+  resetEv();
+  loadTecnicosSelect('Sin asignar');loadEstadosSelect('no_iniciado');loadSintomasSelect('');loadPagosSelect('');
+  showModal('mo-caso');
+}
+
+/* ── FILE UPLOAD ─────────────────────────────────────────── */
+function handleFileSelect(e){
+  var file=e.target.files[0];if(!file)return;
+  var max=5*1024*1024;
+  if(file.size>max){alert('El archivo no debe superar 5MB.');e.target.value='';return;}
+  var reader=new FileReader();
+  reader.onload=function(r){
+    currentEvB64=r.result.split(',')[1];
+    currentEvTipo=file.type;currentEvNombre=file.name;
+    document.getElementById('ev-nombre').textContent=file.name;
+    document.getElementById('ev-ver-btn').style.display='inline-flex';
+  };
+  reader.readAsDataURL(file);
+}
+function resetEv(){currentEvB64=null;currentEvTipo=null;currentEvNombre=null;document.getElementById('ev-nombre').textContent='Adjuntar archivo';var vb=document.getElementById('ev-ver-btn');vb.style.display='none';vb.removeAttribute('data-load-num');document.getElementById('mc-file').value='';}
+function verEvidencia(ev){
+  if(ev)ev.stopPropagation();
+  if(currentEvB64){showEvModal(currentEvB64,currentEvTipo,currentEvNombre);return;}
+  var num=document.getElementById('ev-ver-btn').getAttribute('data-load-num');
+  if(num)viewEvByNum(num);
+}
+function evBtnClick(btn){ viewEvByNum(btn.getAttribute('data-num')); }
+function viewEvByNum(num){api('/api/admin/casos/'+encodeURIComponent(num)+'/evidencia').then(function(d){showEvModal(d.base64,d.tipo,d.nombre);}).catch(function(){toast('Sin evidencia adjunta');});}
+function showEvModal(b64,tipo,nombre){
+  document.getElementById('mev-t').textContent='Evidencia: '+esc(nombre||'archivo');
+  var v=document.getElementById('ev-viewer');
+  if(tipo&&tipo.includes('pdf')){
+    v.innerHTML='<embed src="data:'+esc(tipo)+';base64,'+b64+'" type="application/pdf" width="100%" height="500px"><br><a href="data:'+esc(tipo)+';base64,'+b64+'" download="'+esc(nombre||'evidencia.pdf')+'" class="btn bp" style="margin-top:10px">Descargar PDF</a>';
+  }else{
+    v.innerHTML='<img src="data:'+esc(tipo||'image/jpeg')+';base64,'+b64+'" style="max-width:100%;border-radius:8px"><br><a href="data:'+esc(tipo||'image/jpeg')+';base64,'+b64+'" download="'+esc(nombre||'evidencia')+'" class="btn bp" style="margin-top:10px;display:inline-flex">Descargar imagen</a>';
+  }
+  showModal('mo-ev');
+}
+
+/* ── TICKETS ─────────────────────────────────────────────── */
+function loadTickets(){
+  api('/api/admin/tickets').then(function(rows){
+    var sc={abierto:'bt',en_proceso:'by',cerrado:'bg'};
+    var h=rows.map(function(t){
+      return '<tr>'+
+        '<td><span class="badge bt">'+esc(t.ticket_number)+'</span></td>'+
+        '<td><b>'+esc(t.name||'-')+'</b></td>'+
+        '<td style="font-size:12px;color:var(--mint)">'+esc(t.email||'-')+'</td>'+
+        '<td style="font-size:12px">'+esc(t.phone)+'</td>'+
+        '<td style="font-size:12px;max-width:180px">'+esc(t.summary||'-')+'</td>'+
+        '<td><span class="badge '+(sc[t.status]||'bn')+'">'+esc(t.status)+'</span></td>'+
+        '<td style="font-size:11px;color:var(--text2)">'+fmt(t.created_at)+'</td>'+
+        '<td><button class="btn bp" style="font-size:11px" data-tick="'+esc(JSON.stringify(t))+'" onclick="openAtencionBtn(this)">Gestionar</button></td>'+
+        '</tr>';
+    }).join('');
+    document.getElementById('tb-tickets').innerHTML=h||'<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:18px">Sin tickets</td></tr>';
+  });
+}
+function openAtencionBtn(btn){ openAtencionModal(JSON.parse(btn.dataset.tick)); }
+tabLoaders.tickets=loadTickets;
+
+/* ── CASOS ───────────────────────────────────────────────── */
+function loadCasos(){loadEstadosCache(function(){api('/api/admin/casos').then(function(rows){var h=rows.map(function(c){
+var evBtn = c.evidencia_nombre
+  ? '<button class="btn bp" style="font-size:10px;padding:3px 7px" data-action="viewEv" data-num="'+esc(c.caso_number)+'">Ver</button>'
+  : '-';
+var editBtn = '<button class="btn bgh" style="font-size:11px" data-action="editCaso" data-caso="'+esc(JSON.stringify(c))+'">Editar</button>';
+var delBtn  = '<button class="btn bd" style="font-size:11px" data-action="delCaso" data-num="'+esc(c.caso_number)+'">Eliminar</button>';
+return '<tr>'+
+  '<td><span class="badge bt">'+esc(c.caso_number)+'</span></td>'+
+  '<td style="font-size:11px;color:var(--text2)">'+esc(c.ticket_number||'-')+'</td>'+
+  '<td><b>'+esc(c.name||'-')+'</b></td>'+
+  '<td>'+esc(c.device||'-')+'</td>'+
+  '<td style="font-size:12px;max-width:120px">'+esc(c.resumen||'-')+'</td>'+
+  '<td style="color:var(--cyan)">'+esc(c.technician||'-')+'</td>'+
+  '<td>'+estadoBadge(c.status)+'</td>'+
+  '<td>'+pagoBadge(c.pago)+'</td>'+
+  '<td>'+evBtn+'</td>'+
+  '<td>'+diasBadge(c.dias_abierto)+'</td>'+
+  '<td style="display:flex;gap:4px">'+editBtn+' '+delBtn+'</td>'+
+  '</tr>';
+}).join('');
+document.getElementById('tb-casos').innerHTML=h||'<tr><td colspan="11" style="text-align:center;color:var(--text2);padding:16px">Sin casos</td></tr>';
+});});}
+tabLoaders.casos=loadCasos;
+
+function editCasoBtn(btn){
+  var c=JSON.parse(btn.dataset.caso);
+  document.getElementById('mc-t').textContent='Editar Caso';
+  document.getElementById('mc-orig').value=c.caso_number||'';
+  document.getElementById('mc-ticket').value=c.ticket_number||'';document.getElementById('mc-phone').value=c.phone||'';
+  document.getElementById('mc-name').value=c.name||'';document.getElementById('mc-device').value=c.device||'';
+  document.getElementById('mc-resumen-custom').value=c.resumen||'';document.getElementById('mc-desc').value=c.description||'';
+  resetEv();
+  if(c.evidencia_nombre){document.getElementById('ev-nombre').textContent=c.evidencia_nombre;document.getElementById('ev-ver-btn').style.display='inline-flex';document.getElementById('ev-ver-btn').setAttribute('data-load-num',c.caso_number);}
+  loadTecnicosSelect(c.technician||'Sin asignar');loadEstadosSelect(c.status||'no_iniciado');loadSintomasSelect(c.resumen||'');loadPagosSelect(c.pago||'');
+  showModal('mo-caso');
+}
+
+function saveCasoHandler(){
+  var num=document.getElementById('mc-orig').value;
+  var resumen=document.getElementById('mc-resumen').value||document.getElementById('mc-resumen-custom').value;
+  var data={ticket_number:document.getElementById('mc-ticket').value,phone:document.getElementById('mc-phone').value,name:document.getElementById('mc-name').value,technician:document.getElementById('mc-tech').value,device:document.getElementById('mc-device').value,status:document.getElementById('mc-status').value,resumen:resumen,description:document.getElementById('mc-desc').value,pago:document.getElementById('mc-pago').value||null};
+  var p=num?apiPut('/api/admin/casos/'+num,data):apiPost('/api/admin/casos',data);
+  p.then(function(r){
+    var casoNum=num||r.caso_number;
+    if(currentEvB64&&casoNum){
+      return apiPost('/api/admin/casos/'+casoNum+'/evidencia',{base64:currentEvB64,nombre:currentEvNombre,tipo:currentEvTipo});
+    }
+  }).then(function(){closeModal('mo-caso');loadCasos();loadDashboard();toast(num?'Caso actualizado':'Caso creado');}).catch(function(e){alert('Error: '+e.message);});
+}
+function delCasoBtn(btn){if(!confirm('Eliminar caso '+btn.dataset.num+'?'))return;apiDel('/api/admin/casos/'+btn.dataset.num).then(function(){loadCasos();toast('Eliminado');});}
+
+/* ── CONSULTAR ───────────────────────────────────────────── */
+function queryCasoHandler(){
+  var num=document.getElementById('q-input').value.trim().toUpperCase();
+  var el=document.getElementById('q-result');if(!num){el.innerHTML='';return;}
+  loadEstadosCache(function(){
+    api('/api/admin/casos').then(function(rows){
+      var c=null;for(var i=0;i<rows.length;i++){if(rows[i].caso_number===num||rows[i].caso_number.indexOf(num)>=0){c=rows[i];break;}}
+      if(!c){el.innerHTML='<div style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px;color:var(--red)">No se encontro el caso <b>'+esc(num)+'</b>.</div>';return;}
+      el.innerHTML='<div style="background:rgba(1,176,192,.08);border:1px solid rgba(1,176,192,.2);border-radius:9px;padding:16px">'+
+        '<div style="font-size:16px;font-weight:700;color:var(--cyan);margin-bottom:10px">'+esc(c.caso_number)+'</div>'+
+        '<table style="width:100%">'+
+        '<tr><td style="color:var(--text2);padding:4px 0;font-size:13px;width:130px">Solicitante</td><td style="font-weight:600;font-size:13px">'+esc(c.name||'-')+'</td></tr>'+
+        '<tr><td style="color:var(--text2);padding:4px 0;font-size:13px">Dispositivo</td><td style="font-size:13px">'+esc(c.device||'-')+'</td></tr>'+
+        '<tr><td style="color:var(--text2);padding:4px 0;font-size:13px">Resumen</td><td style="font-size:13px">'+esc(c.resumen||'-')+'</td></tr>'+
+        '<tr><td style="color:var(--text2);padding:4px 0;font-size:13px">Tecnico</td><td style="font-size:13px;color:var(--cyan)">'+esc(c.technician||'Sin asignar')+'</td></tr>'+
+        '<tr><td style="color:var(--text2);padding:4px 0;font-size:13px">Estado</td><td>'+estadoBadge(c.status)+'</td></tr>'+
+        '<tr><td style="color:var(--text2);padding:4px 0;font-size:13px">Pago</td><td>'+pagoBadge(c.pago)+'</td></tr>'+
+        (c.description?'<tr><td style="color:var(--text2);padding:4px 0;font-size:13px;vertical-align:top">Detalle</td><td style="font-size:13px">'+esc(c.description)+'</td></tr>':'')+
+        '<tr><td style="color:var(--text2);padding:4px 0;font-size:13px">Dias abierto</td><td>'+diasBadge(c.dias_abierto)+'</td></tr>'+
+        '</table>'+
+        (c.evidencia_nombre?'<button class="btn bp" style="margin-top:12px;font-size:12px" data-action="viewEv" data-num="'+esc(c.caso_number)+'">Ver evidencia de pago</button>':'')+
+        '</div>';
+    });
+  });
+}
+
+/* ── SERVICIOS ───────────────────────────────────────────── */
+function loadSvcs(){api('/api/admin/services').then(function(rows){var h=rows.map(function(s){return '<tr><td style="font-size:11px;color:var(--text2);font-family:monospace">'+esc(s.code)+'</td><td><b>'+esc(s.name)+'</b></td><td style="font-weight:600;color:'+(s.price_soles==0?'var(--mint)':'var(--text)')+'">'+( s.price_soles==0?'GRATIS':'S/ '+s.price_soles)+'</td><td style="color:var(--text2)">'+esc(s.turnaround||'-')+'</td><td><span class="badge bt">'+esc(s.category||'-')+'</span></td><td><span class="badge '+(s.available?'bg':'br')+'">'+(s.available?'Activo':'Inactivo')+'</span></td><td style="display:flex;gap:4px"><button class="btn bgh" style="font-size:11px" data-svc="'+esc(JSON.stringify(s))+'" onclick="editSvcBtn(this)">Editar</button><button class="btn bd" style="font-size:11px" data-code="'+esc(s.code)+'" onclick="delSvcBtn(this)">Eliminar</button></td></tr>';}).join('');document.getElementById('tb-svcs').innerHTML=h;});}
+tabLoaders.services=loadSvcs;
+function openSvcModal(){document.getElementById('ms-t').textContent='Nuevo Servicio';document.getElementById('ms-orig').value='';document.getElementById('ms-code').value='';document.getElementById('ms-code').disabled=false;['ms-name','ms-desc','ms-time'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('ms-price').value='';document.getElementById('ms-cat').value='disco';document.getElementById('ms-avail').value='true';showModal('mo-svc');}
+function editSvcBtn(btn){var s=JSON.parse(btn.dataset.svc);document.getElementById('ms-t').textContent='Editar Servicio';document.getElementById('ms-orig').value=s.code;document.getElementById('ms-code').value=s.code;document.getElementById('ms-code').disabled=true;document.getElementById('ms-name').value=s.name||'';document.getElementById('ms-desc').value=s.description||'';document.getElementById('ms-price').value=s.price_soles||'';document.getElementById('ms-time').value=s.turnaround||'';document.getElementById('ms-cat').value=s.category||'disco';document.getElementById('ms-avail').value=s.available===false?'false':'true';showModal('mo-svc');}
+function saveSvcHandler(){var o=document.getElementById('ms-orig').value;var d={name:document.getElementById('ms-name').value,description:document.getElementById('ms-desc').value,price_soles:parseFloat(document.getElementById('ms-price').value)||0,turnaround:document.getElementById('ms-time').value,category:document.getElementById('ms-cat').value,available:document.getElementById('ms-avail').value==='true'};var p=o?apiPut('/api/admin/services/'+o,d):apiPost('/api/admin/services',Object.assign({code:document.getElementById('ms-code').value},d));p.then(function(){closeModal('mo-svc');loadSvcs();toast('Guardado');}).catch(function(e){alert(e.message);});}
+function delSvcBtn(btn){if(!confirm('Eliminar?'))return;apiDel('/api/admin/services/'+btn.dataset.code).then(function(){loadSvcs();toast('Eliminado');});}
+
+/* ── FAQs ────────────────────────────────────────────────── */
+function loadFaq(){api('/api/admin/faq').then(function(rows){var h=rows.map(function(f){return '<tr><td style="max-width:260px"><div style="font-weight:600;margin-bottom:2px">'+esc(f.question)+'</div><div style="font-size:11px;color:var(--text2)">'+esc((f.answer||'').substring(0,60))+'...</div></td><td style="font-size:11px;color:var(--text2)">'+esc(f.keywords||'-')+'</td><td style="display:flex;gap:4px"><button class="btn bgh" style="font-size:11px" data-faq="'+esc(JSON.stringify(f))+'" onclick="editFaqBtn(this)">Editar</button><button class="btn bd" style="font-size:11px" data-id="'+f.id+'" onclick="delFaqBtn(this)">Eliminar</button></td></tr>';}).join('');document.getElementById('tb-faq').innerHTML=h;});}
+tabLoaders.faq=loadFaq;
+function openFaqModal(){document.getElementById('mf-t').textContent='Nueva FAQ';['mf-id','mf-q','mf-a','mf-k'].forEach(function(id){document.getElementById(id).value='';});showModal('mo-faq');}
+function editFaqBtn(btn){var f=JSON.parse(btn.dataset.faq);document.getElementById('mf-t').textContent='Editar FAQ';document.getElementById('mf-id').value=f.id;document.getElementById('mf-q').value=f.question;document.getElementById('mf-a').value=f.answer;document.getElementById('mf-k').value=f.keywords||'';showModal('mo-faq');}
+function saveFaqHandler(){var id=document.getElementById('mf-id').value;var d={question:document.getElementById('mf-q').value,answer:document.getElementById('mf-a').value,keywords:document.getElementById('mf-k').value};var p=id?apiPut('/api/admin/faq/'+id,d):apiPost('/api/admin/faq',d);p.then(function(){closeModal('mo-faq');loadFaq();toast('FAQ guardada');}).catch(function(e){alert(e.message);});}
+function delFaqBtn(btn){if(!confirm('Eliminar?'))return;apiDel('/api/admin/faq/'+btn.dataset.id).then(function(){loadFaq();toast('Eliminada');});}
+
+/* ── CONVERSACIONES ─────────────────────────────────────── */
+function loadConv(){api('/api/admin/conversations').then(function(rows){var est={welcome:'Bienvenida',menu:'Menu',services:'Servicios',qa:'Consulta',contact:'Cotizando',waiting:'Esperando',query_caso:'Consulta caso'};var h=rows.map(function(c){return '<tr><td><span class="badge bt">'+esc(c.ticket_number||'-')+'</span></td><td style="font-size:12px;font-family:monospace">'+esc(c.phone)+'</td><td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(est[c.state]||c.state)+'</td><td style="text-align:center">'+(c.msg_count||0)+'</td><td style="max-width:140px;font-size:12px;color:var(--text2)">'+esc((c.last_msg||'').substring(0,40))+'</td><td style="font-size:11px;color:var(--text2)">'+fmt(c.updated_at)+'</td><td><button class="btn bgh" style="font-size:11px" data-phone="'+esc(c.phone)+'" data-name="'+esc(c.name||c.phone)+'" onclick="openChatBtn(this)">Ver chat</button></td></tr>';}).join('');document.getElementById('tb-conv').innerHTML=h||'<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:16px">Sin conversaciones</td></tr>';});}
+tabLoaders.conversations=loadConv;
+function openChatBtn(btn){document.getElementById('mch-t').textContent='Chat: '+btn.dataset.name;api('/api/admin/messages/'+encodeURIComponent(btn.dataset.phone)).then(function(msgs){var h=msgs.map(function(m){return '<div class="'+(m.direction==='in'?'mi':'mo2')+'">'+esc(m.body||'')+'<div class="mt">'+new Date(m.created_at).toLocaleTimeString('es-PE')+'</div></div>';}).join('');document.getElementById('chat-msgs').innerHTML=h;showModal('mo-chat');setTimeout(function(){var c=document.getElementById('chat-msgs');c.scrollTop=c.scrollHeight;},100);});}
+
+/* ── ADMIN ───────────────────────────────────────────────── */
+function loadAdmin(){loadTecs();loadSins();loadEstadosAdmin();loadPagos();}
+tabLoaders.admin=loadAdmin;
+
+function loadTecs(){api('/api/admin/tecnicos').then(function(rows){var h=rows.map(function(t){return '<tr><td><b>'+esc(t.nombre)+'</b></td><td style="font-size:12px;color:var(--text2)">'+esc(t.email||'-')+'</td><td><span class="badge '+(t.activo?'bg':'br')+'">'+(t.activo?'Activo':'Inactivo')+'</span></td><td style="display:flex;gap:4px"><button class="btn bpu2" style="font-size:11px" data-tec="'+esc(JSON.stringify(t))+'" onclick="editTecBtn(this)">Editar</button><button class="btn bd" style="font-size:11px" data-id="'+t.id+'" onclick="delTecBtn(this)">Eliminar</button></td></tr>';}).join('');document.getElementById('tb-tec').innerHTML=h||'<tr><td colspan="4" style="text-align:center;color:var(--text2);padding:12px">Sin tecnicos</td></tr>';});}
+function openTecModal(){document.getElementById('mt-t').textContent='Nuevo Tecnico';['mt-id','mt-nombre','mt-email'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('mt-activo').value='true';showModal('mo-tec');}
+function editTecBtn(btn){var t=JSON.parse(btn.dataset.tec);document.getElementById('mt-t').textContent='Editar Tecnico';document.getElementById('mt-id').value=t.id;document.getElementById('mt-nombre').value=t.nombre;document.getElementById('mt-email').value=t.email||'';document.getElementById('mt-activo').value=t.activo?'true':'false';showModal('mo-tec');}
+function saveTecHandler(){var id=document.getElementById('mt-id').value;var d={nombre:document.getElementById('mt-nombre').value,email:document.getElementById('mt-email').value,activo:document.getElementById('mt-activo').value==='true'};var p=id?apiPut('/api/admin/tecnicos/'+id,d):apiPost('/api/admin/tecnicos',d);p.then(function(){closeModal('mo-tec');loadTecs();loadTecnicosSelect();toast('Tecnico guardado');}).catch(function(e){alert(e.message);});}
+function delTecBtn(btn){if(!confirm('Eliminar?'))return;apiDel('/api/admin/tecnicos/'+btn.dataset.id).then(function(){loadTecs();loadTecnicosSelect();toast('Eliminado');});}
+
+function loadSins(){api('/api/admin/sintomas').then(function(rows){var h=rows.map(function(s){return '<tr><td>'+esc(s.nombre)+'</td><td><span class="badge '+(s.activo?'bg':'br')+'">'+(s.activo?'Activo':'Inactivo')+'</span></td><td style="display:flex;gap:4px"><button class="btn bpu2" style="font-size:11px" data-sin="'+esc(JSON.stringify(s))+'" onclick="editSinBtn(this)">Editar</button><button class="btn bd" style="font-size:11px" data-id="'+s.id+'" onclick="delSinBtn(this)">Eliminar</button></td></tr>';}).join('');document.getElementById('tb-sin').innerHTML=h||'<tr><td colspan="3" style="text-align:center;color:var(--text2);padding:12px">Sin resumenes</td></tr>';});}
+function openSinModal(){document.getElementById('msi-t').textContent='Nuevo Resumen';['msi-id','msi-nombre'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('msi-activo').value='true';showModal('mo-sin');}
+function editSinBtn(btn){var s=JSON.parse(btn.dataset.sin);document.getElementById('msi-t').textContent='Editar Resumen';document.getElementById('msi-id').value=s.id;document.getElementById('msi-nombre').value=s.nombre;document.getElementById('msi-activo').value=s.activo?'true':'false';showModal('mo-sin');}
+function saveSinHandler(){var id=document.getElementById('msi-id').value;var d={nombre:document.getElementById('msi-nombre').value,activo:document.getElementById('msi-activo').value==='true'};var p=id?apiPut('/api/admin/sintomas/'+id,d):apiPost('/api/admin/sintomas',d);p.then(function(){closeModal('mo-sin');loadSins();toast('Guardado');}).catch(function(e){alert(e.message);});}
+function delSinBtn(btn){if(!confirm('Eliminar?'))return;apiDel('/api/admin/sintomas/'+btn.dataset.id).then(function(){loadSins();toast('Eliminado');});}
+
+function loadEstadosAdmin(){api('/api/admin/estados').then(function(rows){var h=rows.map(function(e){return '<tr><td style="font-family:monospace;font-size:12px">'+esc(e.nombre)+'</td><td><b>'+esc(e.label)+'</b></td><td style="text-align:center">'+esc(e.orden)+'</td><td><span class="badge '+(e.activo?'bg':'br')+'">'+(e.activo?'Activo':'Inactivo')+'</span></td><td style="display:flex;gap:4px"><button class="btn bpu2" style="font-size:11px" data-est="'+esc(JSON.stringify(e))+'" onclick="editEstadoBtn(this)">Editar</button><button class="btn bd" style="font-size:11px" data-id="'+e.id+'" onclick="delEstadoBtn(this)">Eliminar</button></td></tr>';}).join('');document.getElementById('tb-estados').innerHTML=h||'<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:12px">Sin estados</td></tr>';});}
+function openEstadoModal(){document.getElementById('me-t').textContent='Nuevo Estado';['me-id','me-nombre','me-label'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('me-orden').value='10';document.getElementById('me-activo').value='true';showModal('mo-estado');}
+function editEstadoBtn(btn){var e=JSON.parse(btn.dataset.est);document.getElementById('me-t').textContent='Editar Estado';document.getElementById('me-id').value=e.id;document.getElementById('me-nombre').value=e.nombre;document.getElementById('me-label').value=e.label;document.getElementById('me-orden').value=e.orden||0;document.getElementById('me-activo').value=e.activo?'true':'false';showModal('mo-estado');}
+function saveEstadoHandler(){var id=document.getElementById('me-id').value;var d={nombre:document.getElementById('me-nombre').value,label:document.getElementById('me-label').value,orden:parseInt(document.getElementById('me-orden').value)||0,activo:document.getElementById('me-activo').value==='true'};var p=id?apiPut('/api/admin/estados/'+id,d):apiPost('/api/admin/estados',d);p.then(function(){closeModal('mo-estado');loadEstadosAdmin();loadEstadosCache();toast('Estado guardado');}).catch(function(e){alert(e.message);});}
+function delEstadoBtn(btn){if(!confirm('Eliminar estado?'))return;apiDel('/api/admin/estados/'+btn.dataset.id).then(function(){loadEstadosAdmin();loadEstadosCache();toast('Eliminado');});}
+
+
+/* ── ESTADOS DE PAGO ─────────────────────────────────────────────── */
+function loadPagos(){
+  api('/api/admin/pagos').then(function(rows){
+    var h=rows.map(function(p){
+      return '<tr>'+
+        '<td style="font-family:monospace;font-size:12px">'+esc(p.nombre)+'</td>'+
+        '<td><b>'+esc(p.label)+'</b></td>'+
+        '<td><span class="badge '+esc(p.color||'bn')+'">'+esc(p.label)+'</span></td>'+
+        '<td style="text-align:center">'+esc(p.orden)+'</td>'+
+        '<td><span class="badge '+(p.activo?'bg':'br')+'">'+(p.activo?'Activo':'Inactivo')+'</span></td>'+
+        '<td style="display:flex;gap:4px">'+
+          '<button class="btn" style="font-size:11px;background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3)" data-pago="'+esc(JSON.stringify(p))+'" onclick="editPagoBtn(this)">Editar</button>'+
+          '<button class="btn bd" style="font-size:11px" data-id="'+p.id+'" onclick="delPagoBtn(this)">Eliminar</button>'+
+        '</td></tr>';
+    }).join('');
+    document.getElementById('tb-pago').innerHTML=h||'<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:12px">Sin estados de pago</td></tr>';
+  }).catch(function(){ document.getElementById('tb-pago').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text2);padding:12px">Cargando...</td></tr>'; });
+}
+
+function openPagoModal(){
+  document.getElementById('mp-t').textContent='Nuevo Estado de Pago';
+  document.getElementById('mp-id').value='';
+  document.getElementById('mp-nombre').value='';
+  document.getElementById('mp-label').value='';
+  document.getElementById('mp-color').value='bn';
+  document.getElementById('mp-orden').value='10';
+  document.getElementById('mp-activo').value='true';
+  showModal('mo-pago');
+}
+function editPagoBtn(btn){
+  var p=JSON.parse(btn.dataset.pago);
+  document.getElementById('mp-t').textContent='Editar Estado de Pago';
+  document.getElementById('mp-id').value=p.id;
+  document.getElementById('mp-nombre').value=p.nombre;
+  document.getElementById('mp-label').value=p.label;
+  document.getElementById('mp-color').value=p.color||'bn';
+  document.getElementById('mp-orden').value=p.orden||0;
+  document.getElementById('mp-activo').value=p.activo?'true':'false';
+  showModal('mo-pago');
+}
+function savePagoHandler(){
+  var id=document.getElementById('mp-id').value;
+  var d={nombre:document.getElementById('mp-nombre').value,label:document.getElementById('mp-label').value,color:document.getElementById('mp-color').value,orden:parseInt(document.getElementById('mp-orden').value)||0,activo:document.getElementById('mp-activo').value==='true'};
+  if(!d.nombre||!d.label){alert('Nombre y etiqueta son requeridos');return;}
+  var p=id?apiPut('/api/admin/pagos/'+id,d):apiPost('/api/admin/pagos',d);
+  p.then(function(){closeModal('mo-pago');loadPagos();loadEstadosCache();toast('Estado de pago guardado');}).catch(function(e){alert('Error: '+e.message);});
+}
+function delPagoBtn(btn){
+  if(!confirm('Eliminar este estado de pago?'))return;
+  apiDel('/api/admin/pagos/'+btn.dataset.id).then(function(){loadPagos();loadEstadosCache();toast('Eliminado');});
+}
+
+/* ── MODAL ATENCION ─────────────────────────────────────── */
+function openAtencionModal(t) {
+  document.getElementById('at-t').textContent = 'Atencion — Ticket ' + esc(t.ticket_number);
+  document.getElementById('at-ticket').value    = t.ticket_number;
+  document.getElementById('at-info-ticket').textContent = t.ticket_number;
+  document.getElementById('at-info-phone').textContent  = t.phone || '-';
+  // Split name into nombre/apellidos
+  var parts = (t.name || '').trim().split(' ');
+  var firstName = parts[0] || '';
+  var lastName  = parts.slice(1).join(' ');
+  document.getElementById('at-nombre').value    = firstName;
+  document.getElementById('at-apellidos').value = lastName;
+  document.getElementById('at-email').value     = t.email || '';
+  document.getElementById('at-acuerdo').value  = t.acuerdo || '';
+  document.getElementById('at-status').value   = t.status  || 'abierto';
+  // Dispositivo sugerido a partir del resumen del bot ("Dispositivo: X | Problema: Y | Urgencia: Z")
+  var mDev = /Dispositivo:\s*([^|]+)/.exec(t.summary || '');
+  document.getElementById('at-device').value   = mDev ? mDev[1].trim() : '';
+  document.getElementById('at-notas').value    = '';
+  document.getElementById('at-resumen-bot').textContent = t.summary || '-';
+  loadTecnicosSelect('Sin asignar');
+  loadSintomasSelect('');
+  showModal('mo-atencion');
+}
+
+function saveAtencionHandler(crearCaso) {
+  var ticket  = document.getElementById('at-ticket').value;
+  var acuerdo = document.getElementById('at-acuerdo').value;
+  var status  = document.getElementById('at-status').value;
+  var nombre    = document.getElementById('at-nombre').value.trim();
+  var apellidos = document.getElementById('at-apellidos').value.trim();
+  var email     = document.getElementById('at-email').value.trim();
+  var name      = (nombre + ' ' + apellidos).trim();
+  var phone     = document.getElementById('at-info-phone').textContent;
+
+  // Save ticket acuerdo + status
+  apiPut('/api/admin/tickets/' + ticket, {status: status, acuerdo: acuerdo, email: email, name: name})
+    .then(function() {
+      if (!crearCaso) {
+        closeModal('mo-atencion'); loadTickets(); toast('Acuerdo guardado'); return;
+      }
+      // Also create caso
+      var tech    = document.getElementById('at-tech').value;
+      var device  = document.getElementById('at-device').value;
+      var resumen = document.getElementById('at-resumen').value || document.getElementById('at-notas').value;
+      return apiPost('/api/admin/casos', {
+        ticket_number: ticket,
+        phone: phone,
+        name: name,
+        technician: tech,
+        device: device,
+        resumen: resumen,
+        description: acuerdo,
+        status: 'no_iniciado',
+        pago: null
+      }).then(function(r) {
+        closeModal('mo-atencion');
+        loadTickets();
+        loadDashboard();
+        toast('Caso ' + (r.caso_number || '') + ' creado');
+      });
+    })
+    .catch(function(e) { alert('Error: ' + e.message); });
+}
+</script>
+</body>
+</html>
