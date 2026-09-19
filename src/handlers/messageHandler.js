@@ -66,8 +66,10 @@ async function handleMessage(phone, incomingText, meta = {}) {
   }
 
   switch (session.state) {
-    case 'welcome':       return handleWelcome(phone, text, session);
-    case 'welcome_email': return handleWelcomeEmail(phone, text, session);
+    case 'welcome':         return handleWelcome(phone, text, session);
+    case 'welcome_email':   return handleWelcomeEmail(phone, text, session);
+    case 'welcome_confirm': return handleWelcomeConfirm(phone, textLow, session);
+    case 'welcome_fix':     return handleWelcomeFix(phone, textLow, session);
     case 'menu':          return handleMenu(phone, textLow, session);
     case 'services':      return handleServices(phone, textLow, session);
     case 'service_detail':return handleServiceDetail(phone, textLow, session);
@@ -92,9 +94,17 @@ async function handleMessage(phone, incomingText, meta = {}) {
 }
 
 // ── Paso 1: Bienvenida — pedir nombre ──────────────────────
+// El nombre de perfil de WhatsApp puede venir vacío o con basura ("." , emojis):
+// solo se usa si tiene al menos 2 letras y un largo razonable.
+function nombrePerfil(profileName) {
+  const n = (profileName || '').trim();
+  return (n.length <= 40 && /\p{L}{2,}/u.test(n)) ? n : null;
+}
+
 async function iniciarBienvenida(phone, profileName) {
   await typingDelay(300);
-  const saludo = profileName ? `¡Hola, *${profileName}*! 👋 ` : '¡Bienvenido/a! 🔗 ';
+  const perfil = nombrePerfil(profileName);
+  const saludo = perfil ? `¡Hola, *${perfil}*! 👋 ` : '¡Bienvenido/a! 🔗 ';
   const msg =
     `${saludo}Gracias por escribir a *Recupero 24/7*\n${SITE_URL}\n\n` +
     `Somos especialistas en recuperación de información digital en Lima, Perú.\n\n` +
@@ -126,6 +136,14 @@ async function handleWelcome(phone, text, session) {
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(' ');
 
+  // Si venía de corregir solo el nombre, ya hay un correo pendiente → volver a la confirmación
+  const pendingEmail = session.context?.pending_email;
+  if (pendingEmail) {
+    await updateSession(phone, { name, state: 'welcome_confirm' });
+    await typingDelay(300);
+    return logAndReturn(phone, mensajeConfirmacion(name, pendingEmail));
+  }
+
   await updateSession(phone, { name, state: 'welcome_email' });
   await typingDelay(300);
   return logAndReturn(phone,
@@ -135,7 +153,7 @@ async function handleWelcome(phone, text, session) {
   );
 }
 
-// ── Paso 2: Capturar correo electrónico ────────────────────
+// ── Paso 2: Capturar correo electrónico → pedir confirmación ──
 async function handleWelcomeEmail(phone, text, session) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const email = text.trim().toLowerCase();
@@ -146,6 +164,65 @@ async function handleWelcomeEmail(phone, text, session) {
     );
   }
 
+  // El correo queda pendiente en el contexto (no en la sesión) hasta que el cliente confirme
+  await updateSession(phone, { state: 'welcome_confirm', context: { ...(session.context || {}), pending_email: email } });
+  await typingDelay(300);
+  return logAndReturn(phone, mensajeConfirmacion(session.name, email));
+}
+
+function mensajeConfirmacion(name, email) {
+  return (
+    `📋 *Confirmación de datos*\n\n` +
+    `Para confirmar, los datos de usted como nuevo cliente son:\n\n` +
+    `👤 Nombre: *${name}*\n` +
+    `📧 Correo: ${email}\n\n` +
+    `¿Es correcto? Escriba *OK* para confirmar o *NO* para corregir.`
+  );
+}
+
+// Normaliza la respuesta: minúsculas, sin tildes ni signos ("Sí.", "OK!" → "si", "ok")
+const normalizar = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, '').trim();
+const CONFIRM_WORDS = ['ok', 'okey', 'okay', 'si', 'yes', 'correcto', 'confirmar', 'confirmo', 'confirmado', 'exacto', 'afirmativo'];
+const REJECT_WORDS  = ['no', 'corregir', 'cambiar', 'editar', 'incorrecto', 'error', 'mal'];
+
+// ── Paso 3: Confirmar nombre + correo ──────────────────────
+async function handleWelcomeConfirm(phone, textLow, session) {
+  const email = session.context?.pending_email;
+  // Sin correo pendiente (contexto perdido) → volver a pedirlo
+  if (!email) {
+    return enviar(phone, `Para completar su registro, ¿podría indicarnos su *correo electrónico*?`, 'welcome_email');
+  }
+
+  const resp = normalizar(textLow);
+  if (CONFIRM_WORDS.includes(resp)) return completarRegistro(phone, session, email);
+
+  if (REJECT_WORDS.includes(resp)) {
+    await typingDelay(200);
+    return enviar(phone,
+      `Sin problema. ¿Qué dato desea corregir?\n\n1️⃣  Nombre\n2️⃣  Correo electrónico\n\n_Responda con el número de la opción_`,
+      'welcome_fix'
+    );
+  }
+
+  await typingDelay(200);
+  return logAndReturn(phone, mensajeConfirmacion(session.name, email));
+}
+
+// ── Paso 3b: Elegir qué dato corregir ──────────────────────
+async function handleWelcomeFix(phone, textLow, session) {
+  const resp = normalizar(textLow);
+  if (resp === '1' || resp === 'nombre') {
+    await updateSession(phone, { name: null, state: 'welcome' });
+    return logAndReturn(phone, `Por favor, indíquenos su *nombre completo*.`);
+  }
+  if (resp === '2' || resp === 'correo' || resp === 'email') {
+    return enviar(phone, `Por favor, indíquenos su *correo electrónico*.\n_(Ejemplo: nombre@correo.com)_`, 'welcome_email');
+  }
+  return logAndReturn(phone, `Responda *1* para corregir el nombre o *2* para corregir el correo.`);
+}
+
+// ── Paso 4: Registro confirmado → ticket + menú ────────────
+async function completarRegistro(phone, session, email) {
   const name = session.name;
   const ticketNumber = await nextTicketNumber();
 
@@ -156,7 +233,7 @@ async function handleWelcomeEmail(phone, text, session) {
     [ticketNumber, phone, name, email, `Consulta de ${name} — WhatsApp`]
   );
 
-  // Guardar sesión completa
+  // Guardar sesión completa (el correo pendiente pasa a ser definitivo)
   await updateSession(phone, {
     name,
     state:         'menu',
