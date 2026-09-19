@@ -27,12 +27,6 @@ app.get(['/admin', '/ADMIN', '/Admin'], (_, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// ── Cliente Twilio ─────────────────────────────────────────
-const twilioClient = twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
-
 // ── Estado interno ────────────────────────────────────────
 const appState = { dbReady: false };
 

@@ -2,6 +2,8 @@
 const express = require('express');
 const router  = express.Router();
 const { query, execute, queryOne, nextCasoNumber } = require('../data/database');
+const { estadoInicial, validarAvanceEstado } = require('../services/estados');
+const { notificarCaso } = require('../services/notifier');
 
 // ── Ping público ──────────────────────────────────────────
 router.get('/ping', function(req, res) {
@@ -48,25 +50,51 @@ router.get('/casos', wrap(async (req, res) => {
   res.json(rows);
 }));
 
+// Un caso nace en el estado inicial; solo puede crearse en un estado más avanzado si ya está pagado.
 router.post('/casos', wrap(async (req, res) => {
   const {ticket_number,phone,name,technician,status,description,device,resumen,pago} = req.body;
+  const inicial = await estadoInicial();
+  const estado  = status || inicial;
+  const errRegla = await validarAvanceEstado(inicial, estado, pago || null);
+  if (errRegla) return res.status(400).json({error: errRegla});
+
   const caso_number = await nextCasoNumber();
   await execute(
     `INSERT INTO casos (caso_number,ticket_number,phone,name,technician,status,description,device,resumen,pago)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-    [caso_number,ticket_number||null,phone||'',name||'',technician||'Sin asignar',status||'no_iniciado',description||'',device||'',resumen||'',pago||null]
+    [caso_number,ticket_number||null,phone||'',name||'',technician||'Sin asignar',estado,description||'',device||'',resumen||'',pago||null]
   );
   if (ticket_number) await execute("UPDATE tickets SET status='en_proceso',updated_at=NOW() WHERE ticket_number=$1",[ticket_number]);
-  res.json({ok:true,caso_number});
+
+  // Notificar al cliente por WhatsApp que su caso fue registrado
+  const notificacion = await notificarCaso(caso_number, 'creado');
+  res.json({ok:true,caso_number,notificacion});
 }));
 
+// Regla: avanzar de estado exige pago registrado como "pagado"; cada avance se notifica al cliente.
 router.put('/casos/:num', wrap(async (req, res) => {
   const {technician,status,description,device,resumen,pago,name,ticket_number} = req.body;
+  const actual = await queryOne('SELECT status, pago FROM casos WHERE caso_number=$1',[req.params.num]);
+  if (!actual) return res.status(404).json({error:'Caso no encontrado'});
+
+  const pagoEfectivo = pago !== undefined ? (pago || null) : actual.pago;
+  const errRegla = await validarAvanceEstado(actual.status, status, pagoEfectivo);
+  if (errRegla) return res.status(400).json({error: errRegla});
+
   await execute(
     `UPDATE casos SET technician=$1,status=$2,description=$3,device=$4,resumen=$5,pago=$6,name=$7,ticket_number=$8,updated_at=NOW() WHERE caso_number=$9`,
-    [technician,status,description,device,resumen||'',pago||null,name,ticket_number,req.params.num]
+    [technician,status,description,device,resumen||'',pagoEfectivo,name,ticket_number,req.params.num]
   );
-  res.json({ok:true});
+
+  const estado_cambiado = !!status && status !== actual.status;
+  const notificacion = estado_cambiado ? await notificarCaso(req.params.num, 'avance') : null;
+  res.json({ok:true,estado_cambiado,notificacion});
+}));
+
+// Reenvío manual de la notificación del estado actual (p. ej. si el envío anterior falló)
+router.post('/casos/:num/notificar', wrap(async (req, res) => {
+  const notificacion = await notificarCaso(req.params.num, req.body?.tipo === 'creado' ? 'creado' : 'avance');
+  res.json({ok: notificacion.ok, notificacion});
 }));
 
 router.delete('/casos/:num', wrap(async (req, res) => {
