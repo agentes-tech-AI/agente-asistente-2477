@@ -27,6 +27,8 @@ async function getSession(phone) {
     email:         row.email,
     state:         row.state,
     ticket_number: row.ticket_number,
+    contact_phone:    row.contact_phone,
+    external_user_id: row.external_user_id,
     context:       row.context || {},
   };
 
@@ -43,6 +45,8 @@ async function updateSession(phone, updates) {
   if (updates.name          !== undefined) { fields.push(`name=$${i++}`);          values.push(updates.name); }
   if (updates.email         !== undefined) { fields.push(`email=$${i++}`);         values.push(updates.email); }
   if (updates.ticket_number !== undefined) { fields.push(`ticket_number=$${i++}`); values.push(updates.ticket_number); }
+  if (updates.contact_phone    !== undefined) { fields.push(`contact_phone=$${i++}`);    values.push(updates.contact_phone); }
+  if (updates.external_user_id !== undefined) { fields.push(`external_user_id=$${i++}`); values.push(updates.external_user_id); }
   if (updates.context       !== undefined) { fields.push(`context=$${i++}`);       values.push(JSON.stringify(updates.context)); }
   fields.push(`updated_at=NOW()`);
   values.push(phone);

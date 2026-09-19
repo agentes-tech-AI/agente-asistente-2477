@@ -31,7 +31,7 @@ router.get('/stats', wrap(async (req, res) => {
   const [casosP] = await query("SELECT COUNT(*)::int AS n FROM casos WHERE status NOT IN ('cancelado','listo_recoger','por_cancelar') AND COALESCE(pago,'') <> 'cancelado'");
   const [svcs]   = await query('SELECT COUNT(*)::int AS n FROM services WHERE available=true');
   const [faqs]   = await query('SELECT COUNT(*)::int AS n FROM faq');
-  const leads    = await query("SELECT c.phone,c.context,c.name,c.updated_at,c.ticket_number FROM conversations c WHERE c.state='waiting' ORDER BY c.updated_at DESC LIMIT 20");
+  const leads    = await query("SELECT c.phone,c.contact_phone,c.context,c.name,c.updated_at,c.ticket_number FROM conversations c WHERE c.state='waiting' ORDER BY c.updated_at DESC LIMIT 20");
   res.json({
     total_conversations: convs?.n||0, total_messages:msgs?.n||0, messages_today:today?.n||0,
     open_tickets:tkts?.n||0, casos_pendientes:casosP?.n||0, active_services:svcs?.n||0,
@@ -75,12 +75,14 @@ router.delete('/casos/:num', wrap(async (req, res) => {
 }));
 
 // ── TICKETS ───────────────────────────────────────────────
-router.get('/tickets', wrap(async (req, res) => res.json(await query('SELECT id,ticket_number,phone,name,email,summary,acuerdo,status,created_at,updated_at FROM tickets ORDER BY created_at DESC LIMIT 200'))));
+router.get('/tickets', wrap(async (req, res) => res.json(await query('SELECT id,ticket_number,phone,contact_phone,name,email,summary,acuerdo,status,created_at,updated_at FROM tickets ORDER BY created_at DESC LIMIT 200'))));
 router.put('/tickets/:num', wrap(async (req, res) => {
-  const {status,summary,email,acuerdo,name:tname} = req.body;
+  const {status,summary,email,acuerdo,name:tname,contact_phone} = req.body;
   // Solo se sobreescriben los campos enviados; el resumen del bot se conserva si no viene
-  await execute('UPDATE tickets SET status=COALESCE($1,status),summary=COALESCE($2,summary),email=COALESCE($3,email),acuerdo=COALESCE($4,acuerdo),name=COALESCE($5,name),updated_at=NOW() WHERE ticket_number=$6',
-    [status||null,summary||null,email||null,acuerdo||null,tname||null,req.params.num]);
+  await execute('UPDATE tickets SET status=COALESCE($1,status),summary=COALESCE($2,summary),email=COALESCE($3,email),acuerdo=COALESCE($4,acuerdo),name=COALESCE($5,name),contact_phone=COALESCE($6,contact_phone),updated_at=NOW() WHERE ticket_number=$7',
+    [status||null,summary||null,email||null,acuerdo||null,tname||null,contact_phone||null,req.params.num]);
+  // El celular de contacto también se refleja en la conversación del cliente
+  if (contact_phone) await execute('UPDATE conversations SET contact_phone=$1 WHERE phone=(SELECT phone FROM tickets WHERE ticket_number=$2)',[contact_phone,req.params.num]).catch(()=>{});
   res.json({ok:true});
 }));
 
