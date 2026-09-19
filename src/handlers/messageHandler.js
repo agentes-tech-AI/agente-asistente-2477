@@ -4,6 +4,7 @@ const { getSession, updateSession, logMessage, getHistory } = require('../servic
 const { askAI }          = require('../services/aiService');
 const { checkLimit, typingDelay } = require('../services/rateLimiter');
 const { trackEvent }     = require('../config/azure');
+const { labelEstadoCaso, labelEstadoPago } = require('../services/estados');
 
 const SITE_URL = 'https://recuperotusdatos.com';
 
@@ -416,24 +417,6 @@ async function handleMenu(phone, text, session) {
 }
 
 // ── Consulta de caso ────────────────────────────────────────
-// Emojis por clave de estado; la etiqueta visible sale de las tablas
-// administrables estados_caso / estados_pago (con fallback a la clave).
-const ESTADO_EMOJI = {
-  no_iniciado:'⏳', en_revision:'🔍', espera_repuestos:'🔧', espera_usuario:'💬',
-  listo_recoger:'✅', por_cancelar:'⚠️', cancelado:'❌',
-};
-const PAGO_EMOJI = { pendiente:'⏳', pagado:'✅', por_cancelar:'⚠️', cancelado:'❌' };
-
-async function labelDesdeTabla(tabla, clave, emojis) {
-  if (!clave) return null;
-  let label = clave;
-  try {
-    const row = await queryOne(`SELECT label FROM ${tabla} WHERE nombre = $1`, [clave]);
-    if (row?.label) label = row.label;
-  } catch (_) {}
-  return `${emojis[clave] || '📌'} ${label}`;
-}
-
 async function handleQueryCasoInput(phone, text, session) {
   const name      = session.name || 'cliente';
   const casoNum   = text.toUpperCase().replace(/\s+/g, '');
@@ -458,8 +441,8 @@ async function handleQueryCasoInput(phone, text, session) {
     );
   }
 
-  const estado = await labelDesdeTabla('estados_caso', caso.status, ESTADO_EMOJI);
-  const pago   = await labelDesdeTabla('estados_pago', caso.pago,   PAGO_EMOJI);
+  const estado = await labelEstadoCaso(caso.status);
+  const pago   = await labelEstadoPago(caso.pago);
   const msg =
     `📋 *Estado de su caso*\n\n` +
     `🔢 N° caso: *${caso.caso_number}*\n` +

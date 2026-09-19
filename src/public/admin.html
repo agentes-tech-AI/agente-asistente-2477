@@ -368,7 +368,9 @@ input[type=date]::-webkit-calendar-picker-indicator{
   </div>
   <div class="fr">
     <div class="fg"><label class="fl">Dispositivo</label><input type="text" id="mc-device"></div>
-    <div class="fg"><label class="fl">Estado del caso</label><select id="mc-status"></select></div>
+    <div class="fg"><label class="fl">Estado del caso</label><select id="mc-status"></select>
+      <div id="mc-aviso-pago" style="display:none;margin-top:6px;font-size:11px;color:var(--yellow);line-height:1.4">&#9888; Para avanzar el estado, el pago debe estar registrado como <b>Pagado</b>; de lo contrario el sistema rechazará el cambio.</div>
+    </div>
   </div>
   <div class="fg"><label class="fl">Resumen / Sintoma</label><select id="mc-resumen"><option value="">Seleccionar resumen...</option></select></div>
   <div class="fg"><label class="fl">Resumen personalizado</label><input type="text" id="mc-resumen-custom" placeholder="O escriba aqui..."></div>
@@ -532,6 +534,8 @@ input[type=date]::-webkit-calendar-picker-indicator{
 
 var BASE='',KEY='';
 var ESTADOS_CACHE={};
+var ESTADOS_ORDEN={};   // nombre -> orden (para avisar cuando un cambio de estado requiere pago)
+var MC_STATUS_ORIG='';  // estado del caso al abrir el modal de edición
 var PAGOS_CACHE={};   // nombre -> {label,color,activo,orden} (tabla estados_pago)
 // Fallback si la tabla estados_pago aun no responde
 var PL={pendiente:'Pend. pago',pagado:'Pagado',por_cancelar:'Por cancelar',cancelado:'Cancelado'};
@@ -546,7 +550,7 @@ function fmt(d){return d?new Date(d).toLocaleString('es-PE'):'-';}
 function waLabel(p){p=String(p||'');var m=/^whatsapp:(\+\d+)$/.exec(p);if(m)return m[1];var b=/^whatsapp:([A-Z]{2})\.(.+)$/.exec(p);if(b)return 'Número oculto ('+b[1]+'…'+b[2].slice(-4)+')';return p||'-';}
 function fmtPhone(o){return o&&o.contact_phone?esc(o.contact_phone):'<span title="'+esc(o&&o.phone||'')+'">'+esc(waLabel(o&&o.phone))+'</span>';}
 function fmtD(d){return d?new Date(d).toLocaleDateString('es-PE'):'-';}
-function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none';},msg.length>40?5000:2500);}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 function showModal(id){document.getElementById(id).classList.add('show');}
 function setStatus(m,t){var e=document.getElementById('loginStatus');e.textContent=m;e.className=t||'info';e.style.display='block';}
@@ -626,6 +630,7 @@ document.addEventListener('click', function(e) {
   if (action === 'viewEv') { viewEvByNum(btn.dataset.num); }
   else if (action === 'editCaso') { editCasoBtn(btn); }
   else if (action === 'delCaso') { delCasoBtn(btn); }
+  else if (action === 'notifyCaso') { notifyCasoBtn(btn); }
 });
 
 document.addEventListener('DOMContentLoaded',function(){
@@ -684,6 +689,8 @@ document.addEventListener('DOMContentLoaded',function(){
   });
   // file input
   document.getElementById('mc-file').addEventListener('change',handleFileSelect);
+  document.getElementById('mc-status').addEventListener('change',avisoAvancePago);
+  document.getElementById('mc-pago').addEventListener('change',avisoAvancePago);
 });
 
 /* ── DASHBOARD ─────────────────────────────────────────── */
@@ -783,6 +790,7 @@ function loadPagosSelect(cur){
     });
     // Estado guardado que ya no esta activo: mostrarlo igual para no perderlo al editar
     if(cur&&sel.value!==cur){sel.innerHTML+='<option value="'+esc(cur)+'" selected>'+esc(PAGOS_CACHE[cur]?PAGOS_CACHE[cur].label:cur)+'</option>';}
+    avisoAvancePago();
   }).catch(function(){});
 }
 
@@ -790,10 +798,26 @@ function loadEstadosSelect(cur){
   api('/api/admin/estados').then(function(rows){
     var sel=document.getElementById('mc-status');
     sel.innerHTML='';
+    ESTADOS_ORDEN={};rows.forEach(function(e){ESTADOS_ORDEN[e.nombre]=parseInt(e.orden)||0;});
     rows.filter(function(e){return e.activo;}).sort(function(a,b){return a.orden-b.orden;}).forEach(function(e){
       sel.innerHTML+='<option value="'+esc(e.nombre)+'"'+(cur===e.nombre?' selected':'')+'>'+esc(e.label)+'</option>';
     });
+    avisoAvancePago();
   });
+}
+
+// Regla de negocio (espejo del servidor): avanzar a un estado de mayor orden exige pago "pagado"
+function avisoAvancePago(){
+  var st=document.getElementById('mc-status').value, pago=document.getElementById('mc-pago').value;
+  var base=MC_STATUS_ORIG&&ESTADOS_ORDEN[MC_STATUS_ORIG]!==undefined?ESTADOS_ORDEN[MC_STATUS_ORIG]:Math.min.apply(null,Object.keys(ESTADOS_ORDEN).map(function(k){return ESTADOS_ORDEN[k];}).concat([0]));
+  var avanza=ESTADOS_ORDEN[st]!==undefined&&ESTADOS_ORDEN[st]>base;
+  document.getElementById('mc-aviso-pago').style.display=(avanza&&pago!=='pagado')?'block':'none';
+}
+
+function toastNotif(base,n){
+  if(!n)return toast(base);
+  if(n.ok)toast(base+' · Cliente notificado por WhatsApp');
+  else toast(base+' · No se pudo notificar: '+(n.error||'error'));
 }
 
 function loadSintomasSelect(cur){
@@ -809,7 +833,7 @@ function loadSintomasSelect(cur){
 function openCasoFromBtn(btn){openCasoFrom(btn.dataset.t,btn.dataset.p,btn.dataset.n,btn.dataset.d,btn.dataset.s);}
 function openCasoFrom(t,p,n,d,s){
   document.getElementById('mc-t').textContent='Nuevo Caso';
-  document.getElementById('mc-orig').value='';
+  document.getElementById('mc-orig').value='';MC_STATUS_ORIG='';
   document.getElementById('mc-ticket').value=t||'';document.getElementById('mc-phone').value=p||'';
   document.getElementById('mc-name').value=n||'';document.getElementById('mc-device').value=d||'';
   document.getElementById('mc-resumen-custom').value=s||'';document.getElementById('mc-desc').value='';
@@ -881,6 +905,7 @@ var evBtn = c.evidencia_nombre
   : '-';
 var editBtn = '<button class="btn bgh" style="font-size:11px" data-action="editCaso" data-caso="'+esc(JSON.stringify(c))+'">Editar</button>';
 var delBtn  = '<button class="btn bd" style="font-size:11px" data-action="delCaso" data-num="'+esc(c.caso_number)+'">Eliminar</button>';
+var notifBtn= '<button class="btn bgh" style="font-size:11px" title="Reenviar al cliente la notificación del estado actual" data-action="notifyCaso" data-num="'+esc(c.caso_number)+'">&#128241; Notificar</button>';
 return '<tr>'+
   '<td><span class="badge bt">'+esc(c.caso_number)+'</span></td>'+
   '<td style="font-size:11px;color:var(--text2)">'+esc(c.ticket_number||'-')+'</td>'+
@@ -892,7 +917,7 @@ return '<tr>'+
   '<td>'+pagoBadge(c.pago)+'</td>'+
   '<td>'+evBtn+'</td>'+
   '<td>'+diasBadge(c.dias_abierto)+'</td>'+
-  '<td style="display:flex;gap:4px">'+editBtn+' '+delBtn+'</td>'+
+  '<td style="display:flex;gap:4px">'+editBtn+' '+notifBtn+' '+delBtn+'</td>'+
   '</tr>';
 }).join('');
 document.getElementById('tb-casos').innerHTML=h||'<tr><td colspan="11" style="text-align:center;color:var(--text2);padding:16px">Sin casos</td></tr>';
@@ -902,7 +927,7 @@ tabLoaders.casos=loadCasos;
 function editCasoBtn(btn){
   var c=JSON.parse(btn.dataset.caso);
   document.getElementById('mc-t').textContent='Editar Caso';
-  document.getElementById('mc-orig').value=c.caso_number||'';
+  document.getElementById('mc-orig').value=c.caso_number||'';MC_STATUS_ORIG=c.status||'';
   document.getElementById('mc-ticket').value=c.ticket_number||'';document.getElementById('mc-phone').value=c.phone||'';
   document.getElementById('mc-name').value=c.name||'';document.getElementById('mc-device').value=c.device||'';
   document.getElementById('mc-resumen-custom').value=c.resumen||'';document.getElementById('mc-desc').value=c.description||'';
@@ -917,12 +942,18 @@ function saveCasoHandler(){
   var resumen=document.getElementById('mc-resumen').value||document.getElementById('mc-resumen-custom').value;
   var data={ticket_number:document.getElementById('mc-ticket').value,phone:document.getElementById('mc-phone').value,name:document.getElementById('mc-name').value,technician:document.getElementById('mc-tech').value,device:document.getElementById('mc-device').value,status:document.getElementById('mc-status').value,resumen:resumen,description:document.getElementById('mc-desc').value,pago:document.getElementById('mc-pago').value||null};
   var p=num?apiPut('/api/admin/casos/'+num,data):apiPost('/api/admin/casos',data);
+  var notif=null;
   p.then(function(r){
+    notif=r.notificacion||null;
     var casoNum=num||r.caso_number;
     if(currentEvB64&&casoNum){
       return apiPost('/api/admin/casos/'+casoNum+'/evidencia',{base64:currentEvB64,nombre:currentEvNombre,tipo:currentEvTipo});
     }
-  }).then(function(){closeModal('mo-caso');loadCasos();loadDashboard();toast(num?'Caso actualizado':'Caso creado');}).catch(function(e){alert('Error: '+e.message);});
+  }).then(function(){closeModal('mo-caso');loadCasos();loadDashboard();toastNotif(num?'Caso actualizado':'Caso creado',notif);}).catch(function(e){alert('Error: '+e.message);});
+}
+function notifyCasoBtn(btn){
+  if(!confirm('Enviar al cliente la notificación del estado actual del caso '+btn.dataset.num+'?'))return;
+  apiPost('/api/admin/casos/'+btn.dataset.num+'/notificar',{}).then(function(r){toastNotif('Caso '+btn.dataset.num,r.notificacion);}).catch(function(e){alert('Error: '+e.message);});
 }
 function delCasoBtn(btn){if(!confirm('Eliminar caso '+btn.dataset.num+'?'))return;apiDel('/api/admin/casos/'+btn.dataset.num).then(function(){loadCasos();toast('Eliminado');});}
 
@@ -1111,7 +1142,7 @@ function saveAtencionHandler(crearCaso) {
         closeModal('mo-atencion');
         loadTickets();
         loadDashboard();
-        toast('Caso ' + (r.caso_number || '') + ' creado');
+        toastNotif('Caso ' + (r.caso_number || '') + ' creado', r.notificacion);
       });
     })
     .catch(function(e) { alert('Error: ' + e.message); });
