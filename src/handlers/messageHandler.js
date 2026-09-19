@@ -35,7 +35,7 @@ async function buildMenuServicios() {
 
 // ── Enrutador principal ─────────────────────────────────────
 async function handleMessage(phone, incomingText, meta = {}) {
-  const { profileName } = meta;
+  const { profileName, externalUserId } = meta;
   const limit = await checkLimit(phone);
   if (!limit.allowed) { console.log(`[RATE-LIMIT] ${phone}`); return null; }
 
@@ -45,11 +45,23 @@ async function handleMessage(phone, incomingText, meta = {}) {
 
   await logMessage(phone, 'in', text);
 
+  // Con "nombres de usuario" de WhatsApp el remitente llega como BSUID (whatsapp:PE.123…)
+  // y no como teléfono; en ese caso el celular de contacto se pide en el registro.
+  session.sender_phone = telefonoDeWhatsApp(phone);
+  const silent = {};
+  if (externalUserId && session.external_user_id !== externalUserId) silent.external_user_id = externalUserId;
+  if (!session.contact_phone && session.sender_phone) {
+    silent.contact_phone = session.contact_phone = session.sender_phone;
+    await execute('UPDATE tickets SET contact_phone=$1 WHERE phone=$2 AND contact_phone IS NULL', [session.sender_phone, phone]).catch(() => {});
+  }
+  if (Object.keys(silent).length) await updateSession(phone, silent);
+
   const isMenu  = MENU_WORDS.includes(textLow);
   const isHello = HELLO_WORDS.some(g => textLow === g || textLow.startsWith(g + ' '));
 
-  // Saludo con sesión activa → menú
+  // Saludo con sesión activa → menú (si el número está oculto y aún no tenemos celular, pedirlo una vez)
   if ((isMenu || isHello) && session.name && session.email) {
+    if (!session.contact_phone && !session.context?.skip_phone && session.state !== 'ask_phone') return pedirCelularRegistrado(phone, session);
     await typingDelay(200);
     const ticket = session.ticket_number || session.context?.ticket;
     return enviar(phone, menuPrincipal(session.name, ticket), 'menu');
@@ -68,8 +80,10 @@ async function handleMessage(phone, incomingText, meta = {}) {
   switch (session.state) {
     case 'welcome':         return handleWelcome(phone, text, session);
     case 'welcome_email':   return handleWelcomeEmail(phone, text, session);
+    case 'welcome_phone':   return handleWelcomePhone(phone, text, session);
     case 'welcome_confirm': return handleWelcomeConfirm(phone, textLow, session);
     case 'welcome_fix':     return handleWelcomeFix(phone, textLow, session);
+    case 'ask_phone':       return handleAskPhone(phone, text, session);
     case 'menu':          return handleMenu(phone, textLow, session);
     case 'services':      return handleServices(phone, textLow, session);
     case 'service_detail':return handleServiceDetail(phone, textLow, session);
@@ -92,6 +106,28 @@ async function handleMessage(phone, incomingText, meta = {}) {
       return enviar(phone, menuPrincipal(session.name, ticket), 'menu');
   }
 }
+
+// ── Teléfono ───────────────────────────────────────────────
+// "whatsapp:+51987654321" → "+51987654321"; un BSUID ("whatsapp:PE.123…") → null
+function telefonoDeWhatsApp(from) {
+  const m = /^whatsapp:(\+\d{8,15})$/.exec(from || '');
+  return m ? m[1] : null;
+}
+
+// Normaliza un celular escrito por el cliente a E.164. Acepta "987 654 321",
+// "+51 987-654-321", "51987654321", "0051…". Devuelve null si no es válido.
+function normalizarCelular(text) {
+  let t = (text || '').replace(/[\s\-().]/g, '');
+  if (/^00\d+$/.test(t)) t = '+' + t.slice(2);
+  if (/^9\d{8}$/.test(t)) t = '+51' + t;              // celular peruano sin código de país
+  else if (/^\d{8,15}$/.test(t)) t = '+' + t;          // ya incluye código de país
+  return /^\+\d{8,15}$/.test(t) ? t : null;
+}
+
+const PEDIR_CELULAR =
+  `Su número de WhatsApp está oculto por su configuración de privacidad. ` +
+  `Para poder comunicarnos con usted, ¿podría indicarnos su *número de celular* de contacto?\n` +
+  `_(Ejemplo: 987 654 321)_`;
 
 // ── Paso 1: Bienvenida — pedir nombre ──────────────────────
 // El nombre de perfil de WhatsApp puede venir vacío o con basura ("." , emojis):
@@ -141,7 +177,7 @@ async function handleWelcome(phone, text, session) {
   if (pendingEmail) {
     await updateSession(phone, { name, state: 'welcome_confirm' });
     await typingDelay(300);
-    return logAndReturn(phone, mensajeConfirmacion(name, pendingEmail));
+    return logAndReturn(phone, mensajeConfirmacion(name, pendingEmail, celularPendiente(session)));
   }
 
   await updateSession(phone, { name, state: 'welcome_email' });
@@ -165,18 +201,45 @@ async function handleWelcomeEmail(phone, text, session) {
   }
 
   // El correo queda pendiente en el contexto (no en la sesión) hasta que el cliente confirme
-  await updateSession(phone, { state: 'welcome_confirm', context: { ...(session.context || {}), pending_email: email } });
+  const context = { ...(session.context || {}), pending_email: email };
+
+  // Número de WhatsApp oculto y sin celular aún → pedirlo antes de confirmar
+  if (!celularPendiente(session)) {
+    await updateSession(phone, { state: 'welcome_phone', context });
+    await typingDelay(300);
+    return logAndReturn(phone, PEDIR_CELULAR);
+  }
+
+  await updateSession(phone, { state: 'welcome_confirm', context });
   await typingDelay(300);
-  return logAndReturn(phone, mensajeConfirmacion(session.name, email));
+  return logAndReturn(phone, mensajeConfirmacion(session.name, email, celularPendiente(session)));
 }
 
-function mensajeConfirmacion(name, email) {
+// Celular que se mostrará/guardará: el escrito por el cliente, el ya guardado o el del remitente
+function celularPendiente(session) {
+  return session.context?.pending_phone || session.contact_phone || session.sender_phone || null;
+}
+
+// ── Paso 2b: Capturar celular de contacto (solo si WhatsApp oculta el número) ──
+async function handleWelcomePhone(phone, text, session) {
+  const cel = normalizarCelular(text);
+  if (!cel) {
+    return logAndReturn(phone, `Por favor, ingrese un número de celular válido.\n_(Ejemplo: 987 654 321)_`);
+  }
+  const context = { ...(session.context || {}), pending_phone: cel };
+  await updateSession(phone, { state: 'welcome_confirm', context });
+  await typingDelay(300);
+  return logAndReturn(phone, mensajeConfirmacion(session.name, context.pending_email, cel));
+}
+
+function mensajeConfirmacion(name, email, celular) {
   return (
     `📋 *Confirmación de datos*\n\n` +
     `Para confirmar, los datos de usted como nuevo cliente son:\n\n` +
     `👤 Nombre: *${name}*\n` +
-    `📧 Correo: ${email}\n\n` +
-    `¿Es correcto? Escriba *OK* para confirmar o *NO* para corregir.`
+    `📧 Correo: ${email}\n` +
+    (celular ? `📱 Celular: ${celular}\n` : '') +
+    `\n¿Es correcto? Escriba *OK* para confirmar o *NO* para corregir.`
   );
 }
 
@@ -194,18 +257,19 @@ async function handleWelcomeConfirm(phone, textLow, session) {
   }
 
   const resp = normalizar(textLow);
-  if (CONFIRM_WORDS.includes(resp)) return completarRegistro(phone, session, email);
+  if (CONFIRM_WORDS.includes(resp)) return completarRegistro(phone, session, email, celularPendiente(session));
 
   if (REJECT_WORDS.includes(resp)) {
     await typingDelay(200);
+    const opcCelular = session.context?.pending_phone ? `3️⃣  Celular\n` : '';
     return enviar(phone,
-      `Sin problema. ¿Qué dato desea corregir?\n\n1️⃣  Nombre\n2️⃣  Correo electrónico\n\n_Responda con el número de la opción_`,
+      `Sin problema. ¿Qué dato desea corregir?\n\n1️⃣  Nombre\n2️⃣  Correo electrónico\n${opcCelular}\n_Responda con el número de la opción_`,
       'welcome_fix'
     );
   }
 
   await typingDelay(200);
-  return logAndReturn(phone, mensajeConfirmacion(session.name, email));
+  return logAndReturn(phone, mensajeConfirmacion(session.name, email, celularPendiente(session)));
 }
 
 // ── Paso 3b: Elegir qué dato corregir ──────────────────────
@@ -218,19 +282,23 @@ async function handleWelcomeFix(phone, textLow, session) {
   if (resp === '2' || resp === 'correo' || resp === 'email') {
     return enviar(phone, `Por favor, indíquenos su *correo electrónico*.\n_(Ejemplo: nombre@correo.com)_`, 'welcome_email');
   }
-  return logAndReturn(phone, `Responda *1* para corregir el nombre o *2* para corregir el correo.`);
+  if (session.context?.pending_phone && (resp === '3' || resp === 'celular' || resp === 'telefono')) {
+    return enviar(phone, `Por favor, indíquenos su *número de celular*.\n_(Ejemplo: 987 654 321)_`, 'welcome_phone');
+  }
+  const opc3 = session.context?.pending_phone ? ' o *3* para corregir el celular' : '';
+  return logAndReturn(phone, `Responda *1* para corregir el nombre, *2* para corregir el correo${opc3}.`);
 }
 
 // ── Paso 4: Registro confirmado → ticket + menú ────────────
-async function completarRegistro(phone, session, email) {
+async function completarRegistro(phone, session, email, contactPhone) {
   const name = session.name;
   const ticketNumber = await nextTicketNumber();
 
-  // Guardar ticket con nombre + email
+  // Guardar ticket con nombre + email + celular de contacto
   await execute(
-    `INSERT INTO tickets (ticket_number, phone, name, email, summary, status)
-     VALUES ($1,$2,$3,$4,$5,'abierto') ON CONFLICT DO NOTHING`,
-    [ticketNumber, phone, name, email, `Consulta de ${name} — WhatsApp`]
+    `INSERT INTO tickets (ticket_number, phone, name, email, contact_phone, summary, status)
+     VALUES ($1,$2,$3,$4,$5,$6,'abierto') ON CONFLICT DO NOTHING`,
+    [ticketNumber, phone, name, email, contactPhone || null, `Consulta de ${name} — WhatsApp`]
   );
 
   // Guardar sesión completa (el correo pendiente pasa a ser definitivo)
@@ -240,6 +308,7 @@ async function completarRegistro(phone, session, email) {
     context:       { ticket: ticketNumber, email },
     ticket_number: ticketNumber,
     email,
+    contact_phone: contactPhone || null,
   });
 
   trackEvent('NuevoCliente', { phone, name, ticketNumber });
@@ -249,12 +318,38 @@ async function completarRegistro(phone, session, email) {
     `✅ *Registro completado exitosamente*\n\n` +
     `👤 Nombre: *${name}*\n` +
     `📧 Correo: ${email}\n` +
+    (contactPhone ? `📱 Celular: ${contactPhone}\n` : '') +
     `🎫 *Número de ticket: ${ticketNumber}*\n` +
     `_Conserve este número para futuras referencias._\n\n` +
     menuPrincipal(name, ticketNumber);
 
   await logMessage(phone, 'out', msg);
   return msg;
+}
+
+// ── Cliente ya registrado con número oculto: pedir celular una vez ──
+async function pedirCelularRegistrado(phone, session) {
+  await typingDelay(200);
+  return enviar(phone,
+    `Estimado/a *${session.name}*, ${PEDIR_CELULAR}\n\n_Escriba *omitir* para continuar sin indicarlo._`,
+    'ask_phone'
+  );
+}
+
+async function handleAskPhone(phone, text, session) {
+  const ticket = session.ticket_number || session.context?.ticket;
+  if (normalizar(text.toLowerCase()) === 'omitir') {
+    // Se recuerda la decisión para no volver a preguntar en cada saludo
+    return enviar(phone, menuPrincipal(session.name, ticket), 'menu', { ...(session.context || {}), skip_phone: true });
+  }
+  const cel = normalizarCelular(text);
+  if (!cel) {
+    return logAndReturn(phone, `Por favor, ingrese un número de celular válido _(ejemplo: 987 654 321)_ o escriba *omitir*.`);
+  }
+  await updateSession(phone, { contact_phone: cel, state: 'menu' });
+  await execute('UPDATE tickets SET contact_phone=$1 WHERE phone=$2 AND contact_phone IS NULL', [cel, phone]).catch(() => {});
+  await typingDelay(200);
+  return logAndReturn(phone, `✅ Celular registrado: *${cel}*\n\n` + menuPrincipal(session.name, ticket));
 }
 
 // ── Menú ────────────────────────────────────────────────────

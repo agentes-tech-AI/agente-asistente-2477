@@ -1,7 +1,8 @@
 node_modules/
 .env
 *.env
-data/
+# Solo la carpeta data/ de la raiz (datos locales); NO src/data/ (codigo fuente)
+/data/
 *.db
 .DS_Store
 *.log

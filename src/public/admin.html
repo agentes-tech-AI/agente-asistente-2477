@@ -297,7 +297,7 @@ input[type=date]::-webkit-calendar-picker-indicator{
     <div style="font-size:11px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Datos del cliente</div>
     <div class="fr" style="margin-bottom:10px">
       <div><span style="font-size:11px;color:var(--text2)">Ticket</span><div id="at-info-ticket" style="font-weight:700;color:var(--cyan);font-size:14px;margin-top:2px">-</div></div>
-      <div><span style="font-size:11px;color:var(--text2)">Telefono</span><div id="at-info-phone" style="font-size:13px;margin-top:2px">-</div></div>
+      <div><span style="font-size:11px;color:var(--text2)">WhatsApp</span><div id="at-info-phone" style="font-size:13px;margin-top:2px">-</div></div>
     </div>
     <div class="fr">
       <div class="fg" style="margin-bottom:8px"><label class="fl">Nombre</label>
@@ -307,8 +307,13 @@ input[type=date]::-webkit-calendar-picker-indicator{
         <input type="text" id="at-apellidos" placeholder="Apellidos del cliente">
       </div>
     </div>
-    <div class="fg" style="margin-bottom:8px"><label class="fl">Correo electronico</label>
-      <input type="email" id="at-email" placeholder="correo@ejemplo.com">
+    <div class="fr">
+      <div class="fg" style="margin-bottom:8px"><label class="fl">Correo electronico</label>
+        <input type="email" id="at-email" placeholder="correo@ejemplo.com">
+      </div>
+      <div class="fg" style="margin-bottom:8px"><label class="fl">Celular de contacto</label>
+        <input type="text" id="at-phone" placeholder="+51 987 654 321">
+      </div>
     </div>
     <div class="fg" style="margin-bottom:0"><label class="fl">Solicitud registrada por el bot</label>
       <div id="at-resumen-bot" style="font-size:12px;color:var(--text2);line-height:1.5;white-space:pre-wrap">-</div>
@@ -538,6 +543,8 @@ window.addEventListener('load',function(){['logo-img','logo-top'].forEach(functi
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function fmt(d){return d?new Date(d).toLocaleString('es-PE'):'-';}
+function waLabel(p){p=String(p||'');var m=/^whatsapp:(\+\d+)$/.exec(p);if(m)return m[1];var b=/^whatsapp:([A-Z]{2})\.(.+)$/.exec(p);if(b)return 'Número oculto ('+b[1]+'…'+b[2].slice(-4)+')';return p||'-';}
+function fmtPhone(o){return o&&o.contact_phone?esc(o.contact_phone):'<span title="'+esc(o&&o.phone||'')+'">'+esc(waLabel(o&&o.phone))+'</span>';}
 function fmtD(d){return d?new Date(d).toLocaleDateString('es-PE'):'-';}
 function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(function(){t.style.display='none';},2500);}
 function closeModal(id){document.getElementById(id).classList.remove('show');}
@@ -695,11 +702,11 @@ function loadDashboard(){
         var ctx=l.context||{};
         h+='<tr><td><span class="badge bt">'+esc(l.ticket_number||'-')+'</span></td>'+
           '<td><b>'+esc(l.name||'-')+'</b></td>'+
-          '<td style="font-size:12px;color:var(--text2)">'+esc(l.phone)+'</td>'+
+          '<td style="font-size:12px;color:var(--text2)">'+fmtPhone(l)+'</td>'+
           '<td>'+esc(ctx.device||'-')+'</td>'+
           '<td>'+esc(ctx.urgency||'-')+'</td>'+
           '<td style="font-size:11px;color:var(--text2)">'+fmt(l.updated_at)+'</td>'+
-          '<td><button class="btn bp" style="font-size:11px" data-t="'+esc(l.ticket_number)+'" data-p="'+esc(l.phone)+'" data-n="'+esc(l.name||'')+'" data-d="'+esc(ctx.device||'')+'" data-s="'+esc(ctx.symptom||'')+'" onclick="openCasoFromBtn(this)">Crear caso</button></td></tr>';
+          '<td><button class="btn bp" style="font-size:11px" data-t="'+esc(l.ticket_number)+'" data-p="'+esc(l.contact_phone||l.phone)+'" data-n="'+esc(l.name||'')+'" data-d="'+esc(ctx.device||'')+'" data-s="'+esc(ctx.symptom||'')+'" onclick="openCasoFromBtn(this)">Crear caso</button></td></tr>';
       });
       document.getElementById('tb-leads').innerHTML=h;
     });
@@ -854,7 +861,7 @@ function loadTickets(){
         '<td><span class="badge bt">'+esc(t.ticket_number)+'</span></td>'+
         '<td><b>'+esc(t.name||'-')+'</b></td>'+
         '<td style="font-size:12px;color:var(--mint)">'+esc(t.email||'-')+'</td>'+
-        '<td style="font-size:12px">'+esc(t.phone)+'</td>'+
+        '<td style="font-size:12px">'+fmtPhone(t)+'</td>'+
         '<td style="font-size:12px;max-width:180px">'+esc(t.summary||'-')+'</td>'+
         '<td><span class="badge '+(sc[t.status]||'bn')+'">'+esc(t.status)+'</span></td>'+
         '<td style="font-size:11px;color:var(--text2)">'+fmt(t.created_at)+'</td>'+
@@ -962,7 +969,7 @@ function saveFaqHandler(){var id=document.getElementById('mf-id').value;var d={q
 function delFaqBtn(btn){if(!confirm('Eliminar?'))return;apiDel('/api/admin/faq/'+btn.dataset.id).then(function(){loadFaq();toast('Eliminada');});}
 
 /* ── CONVERSACIONES ─────────────────────────────────────── */
-function loadConv(){api('/api/admin/conversations').then(function(rows){var est={welcome:'Bienvenida',welcome_email:'Registro (correo)',welcome_confirm:'Confirmando datos',welcome_fix:'Corrigiendo datos',menu:'Menu',services:'Servicios',service_detail:'Detalle servicio',qa:'Consulta',contact:'Cotizando',waiting:'Esperando',query_caso:'Consulta caso'};var h=rows.map(function(c){return '<tr><td><span class="badge bt">'+esc(c.ticket_number||'-')+'</span></td><td style="font-size:12px;font-family:monospace">'+esc(c.phone)+'</td><td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(est[c.state]||c.state)+'</td><td style="text-align:center">'+(c.msg_count||0)+'</td><td style="max-width:140px;font-size:12px;color:var(--text2)">'+esc((c.last_msg||'').substring(0,40))+'</td><td style="font-size:11px;color:var(--text2)">'+fmt(c.updated_at)+'</td><td><button class="btn bgh" style="font-size:11px" data-phone="'+esc(c.phone)+'" data-name="'+esc(c.name||c.phone)+'" onclick="openChatBtn(this)">Ver chat</button></td></tr>';}).join('');document.getElementById('tb-conv').innerHTML=h||'<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:16px">Sin conversaciones</td></tr>';});}
+function loadConv(){api('/api/admin/conversations').then(function(rows){var est={welcome:'Bienvenida',welcome_email:'Registro (correo)',welcome_confirm:'Confirmando datos',welcome_fix:'Corrigiendo datos',menu:'Menu',services:'Servicios',service_detail:'Detalle servicio',qa:'Consulta',contact:'Cotizando',waiting:'Esperando',query_caso:'Consulta caso'};var h=rows.map(function(c){return '<tr><td><span class="badge bt">'+esc(c.ticket_number||'-')+'</span></td><td style="font-size:12px;font-family:monospace">'+fmtPhone(c)+'</td><td><b>'+esc(c.name||'-')+'</b></td><td>'+esc(est[c.state]||c.state)+'</td><td style="text-align:center">'+(c.msg_count||0)+'</td><td style="max-width:140px;font-size:12px;color:var(--text2)">'+esc((c.last_msg||'').substring(0,40))+'</td><td style="font-size:11px;color:var(--text2)">'+fmt(c.updated_at)+'</td><td><button class="btn bgh" style="font-size:11px" data-phone="'+esc(c.phone)+'" data-name="'+esc(c.name||c.phone)+'" onclick="openChatBtn(this)">Ver chat</button></td></tr>';}).join('');document.getElementById('tb-conv').innerHTML=h||'<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:16px">Sin conversaciones</td></tr>';});}
 tabLoaders.conversations=loadConv;
 function openChatBtn(btn){document.getElementById('mch-t').textContent='Chat: '+btn.dataset.name;api('/api/admin/messages/'+encodeURIComponent(btn.dataset.phone)).then(function(msgs){var h=msgs.map(function(m){return '<div class="'+(m.direction==='in'?'mi':'mo2')+'">'+esc(m.body||'')+'<div class="mt">'+new Date(m.created_at).toLocaleTimeString('es-PE')+'</div></div>';}).join('');document.getElementById('chat-msgs').innerHTML=h;showModal('mo-chat');setTimeout(function(){var c=document.getElementById('chat-msgs');c.scrollTop=c.scrollHeight;},100);});}
 
@@ -1046,7 +1053,9 @@ function openAtencionModal(t) {
   document.getElementById('at-t').textContent = 'Atencion — Ticket ' + esc(t.ticket_number);
   document.getElementById('at-ticket').value    = t.ticket_number;
   document.getElementById('at-info-ticket').textContent = t.ticket_number;
-  document.getElementById('at-info-phone').textContent  = t.phone || '-';
+  document.getElementById('at-info-phone').textContent  = waLabel(t.phone);
+  document.getElementById('at-info-phone').title        = t.phone || '';
+  document.getElementById('at-phone').value     = t.contact_phone || (/^whatsapp:\+/.test(t.phone||'') ? t.phone.replace('whatsapp:','') : '');
   // Split name into nombre/apellidos
   var parts = (t.name || '').trim().split(' ');
   var firstName = parts[0] || '';
@@ -1074,10 +1083,12 @@ function saveAtencionHandler(crearCaso) {
   var apellidos = document.getElementById('at-apellidos').value.trim();
   var email     = document.getElementById('at-email').value.trim();
   var name      = (nombre + ' ' + apellidos).trim();
-  var phone     = document.getElementById('at-info-phone').textContent;
+  var celular   = document.getElementById('at-phone').value.trim();
+  // El caso se crea con el celular de contacto; si no hay, con el remitente de WhatsApp
+  var phone     = celular || document.getElementById('at-info-phone').title || '';
 
   // Save ticket acuerdo + status
-  apiPut('/api/admin/tickets/' + ticket, {status: status, acuerdo: acuerdo, email: email, name: name})
+  apiPut('/api/admin/tickets/' + ticket, {status: status, acuerdo: acuerdo, email: email, name: name, contact_phone: celular || null})
     .then(function() {
       if (!crearCaso) {
         closeModal('mo-atencion'); loadTickets(); toast('Acuerdo guardado'); return;
